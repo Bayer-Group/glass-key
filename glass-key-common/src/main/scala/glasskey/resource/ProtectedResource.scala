@@ -1,0 +1,44 @@
+package glasskey.resource
+
+import glasskey.RuntimeEnvironment
+import glasskey.model.fetchers.Cookie
+import glasskey.model.{ValidatedToken, OAuthAccessToken}
+
+trait ProtectedResource {
+
+  import glasskey.model.fetchers.{AuthHeader, RequestParameter}
+  import glasskey.model.{InvalidRequest, InvalidToken, ValidatedData, ProtectedResourceRequest}
+
+  import scala.concurrent.{ExecutionContext, Future}
+
+  def env: RuntimeEnvironment
+
+  val fetchers = Seq(new AuthHeader.Default(env), new RequestParameter.Default(env.config.providerConfig.jwksUri), new Cookie.Default(env.config.providerConfig.authCookieName, env))
+
+  def handleRequest[R](request: R, handler: ProtectedResourceHandler[ValidatedData, ValidatedToken])(implicit ec: ExecutionContext): Future[ValidatedData] =
+    request match {
+      case r: ProtectedResourceRequest => handleProtectedResourceRequest(r, handler)
+      case t: (OAuthAccessToken, Option[OIDCTokenData]) => handleToken(t, handler)
+    }
+
+  private def handleToken(token: (OAuthAccessToken, Option[OIDCTokenData]), handler: ProtectedResourceHandler[ValidatedData, ValidatedToken])(implicit ec: ExecutionContext): Future[ValidatedData] = {
+    handler.validateToken(token).flatMap { maybeToken =>
+      handler
+        .findValidatedData(maybeToken)
+        .map(_.getOrElse(throw new InvalidToken("The access token is invalid")))
+    }
+  }
+
+  private def handleProtectedResourceRequest(request: ProtectedResourceRequest,
+                                             handler: ProtectedResourceHandler[ValidatedData, ValidatedToken])(implicit ec: ExecutionContext): Future[ValidatedData] =
+    fetchers
+      .find(fetcher => fetcher.matches(request))
+      .map(fetcher => handleToken(fetcher.fetch(request), handler))
+      .getOrElse(throw new InvalidRequest("Access token is not found"))
+}
+
+object ProtectedResource {
+
+  class Default(override val env: RuntimeEnvironment) extends ProtectedResource
+
+}

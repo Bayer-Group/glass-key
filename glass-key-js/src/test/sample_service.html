@@ -1,0 +1,53 @@
+<html>
+    <head>
+        <title>
+            Verify JWT
+        </title>
+        <script language="JavaScript" type="text/javascript" src="http://kjur.github.io/jsrsasign/jsrsasign-latest-all-min.js"></script>
+        <script language="JavaScript" type="text/javascript" src="http://kjur.github.io/jsjws/ext/json-sans-eval-min.js"></script>
+        <script language="JavaScript" type="text/javascript" src="http://kjur.github.io/jsjws/jws-3.2.min.js"></script>
+        <script language="JavaScript" type="text/javascript" src="http://underscorejs.org/underscore-min.js"></script>
+        <script language="JavaScript" type="text/javascript" src="http://code.jquery.com/jquery-2.1.4.js"></script>
+        <script language="JavaScript" type="text/javascript" src="../main/resources/OIDCUtils.js"></script>
+    </head>
+<body>
+<script>
+    //So far this page is meant to be used with the Play OAuth Resource (which is expecting an OAuth token.
+    function getCookie(c_name) {
+        if (document.cookie.length > 0) {
+            var c_start = document.cookie.indexOf(c_name + "=");
+            if (c_start != -1) {
+                c_start = c_start + c_name.length + 1;
+                var c_end = document.cookie.indexOf(";", c_start);
+                if (c_end == -1) {
+                    c_end = document.cookie.length;
+                }
+                return unescape(document.cookie.substring(c_start, c_end));
+            }
+        }
+        return "";
+    }
+
+    function setupAjax() {
+        $.ajaxSetup({headers: {"Authorization": "Bearer " + getCookie("OAUTH_ACCESS_TOKEN")}})
+    }
+
+    function callHello(name) {
+        $.ajax({
+            url: "http://localhost:9000/aws/rest/api/greeting_secure_oidc?name=" + name,
+            error: function(httpObj, textStatus) {
+                if(httpObj.status == 401)
+                    console.log("We had an unauthorized error! ~ " + httpObj.responseText);
+                else if (httpObj.status == 500)
+                    console.log("We had some sort of server error! ~ " + httpObj);
+            },
+            success: function(data) {
+                console.log("We didn't have an error! The message was " + data.message);
+            }
+        });
+    }
+    setupAjax();
+    callHello("Foo");
+</script>
+</body>
+</html>

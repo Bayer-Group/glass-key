@@ -1,0 +1,56 @@
+@(name: String)
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>@name</title>
+        <script src="@routes.Assets.at("javascripts/jso2.js")" type="text/javascript"></script>
+        <script src="@routes.Assets.at("javascripts/jquery-1.9.0.min.js")" type="text/javascript"></script>
+    </head>
+    <body>
+        <script>
+        $(document).ready(function() {
+            // Add configuration for one or more providers.
+            var opts = {
+                providerID: "ping",
+                client_id: "TPS_TEST",
+                redirect_uri: "http://localhost:9001/api/PingHelloWorldImplicit?name=" + "@name",
+                authorization: "https://ping.company.com/as/authorization.oauth2",
+                scopes: { request: ["openid"]}
+            };
+            var jso = new JSO(opts);
+            jso.callback();
+            JSO.enablejQuery($);
+            jso.ajax({
+                url: "http://localhost:9000/aws/rest/api/greeting_secure_oidc?name=" + "@name",
+                oauth: {
+                    scopes: {
+                        request: ["openid"]
+                    }
+                },
+                dataType: 'json',
+                success: function(data) {
+                    console.log({response:data});
+                    $('#message').text(JSON.stringify(data));
+                }
+             });
+            jso.getToken(function(token) {
+                console.log("I got the token: ", token, " and I'll put it in the page");
+                $('#token').text(JSON.stringify(token));
+            }, opts);
+        });
+        </script>
+        <div id="container">
+
+            <h1>Hello World Implicit</h1>
+
+            <div id="content">
+                <p>Once you have authenticated and approved the access, the hello world response will render below:</p>
+                <p id="message" />
+                <p>You'll also see the token which could be used in subsequent AJAX calls below:</p>
+                <p id="token"/>
+            </div>
+
+        </div>
+    </body>
+</html>
