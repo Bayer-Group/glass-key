@@ -1,36 +1,42 @@
 package glasskey.spray.resource
 
+import glasskey.config.OAuthConfig
 import glasskey.model.fetchers.{IDTokenAuthHeader, IDTokenRequestParameter}
-import glasskey.model.{OAuthAccessToken, OAuthTerms}
-import spray.http.HttpHeaders.Cookie
+import glasskey.model._
+import glasskey.model.validation.UnauthorizedException
+import glasskey.resource.OIDCTokenData
+import glasskey.resource.validation.Validator
+import spray.http.HttpHeaders.{Authorization, Cookie}
+import spray.http.{HttpHeader, OAuth2BearerToken}
+import spray.routing.{RequestContext, Rejection}
+import spray.routing.authentication._
 
 import scala.concurrent.ExecutionContext
 
-trait BearerTokenAuthenticator[R] extends AbstractTokenAuthenticator {
+trait BearerTokenExtractor {
 
-  import glasskey.model.OAuthException
-  import glasskey.resource.OIDCTokenData
-  import glasskey.resource.validation.PingIdentityProtectedResourceHandler
-  import spray.http.HttpHeaders.Authorization
-  import spray.http.{HttpHeader, OAuth2BearerToken}
-  import spray.routing.RequestContext
   import spray.util._
 
-  implicit val env: SprayResourceRuntimeEnvironment[R]
-  def handler: PingIdentityProtectedResourceHandler[R]
+  def idTokenHdr = new IDTokenAuthHeader.Default(OAuthConfig.providerConfig.jwksUri,
+        OAuthConfig.providerConfig.idHeaderName,
+        OAuthConfig.providerConfig.idHeaderPrefix)
+  def idTokenParam = new IDTokenRequestParameter.Default(OAuthConfig.providerConfig.jwksUri)
 
-  def idTokenHdr : IDTokenAuthHeader
-  def idTokenParam : IDTokenRequestParameter
-
-  override def extractAccessToken(ctx: RequestContext): Either[OAuthException, (OAuthAccessToken, Option[OIDCTokenData])] =
+  def extractAccessToken(ctx: RequestContext): Either[OAuthException, (OAuthAccessToken, Option[OIDCTokenData])] =
     List(fromCookie(ctx), fromHeader(ctx), fromQueryParameter(ctx)).partition(_.isDefined) match {
       case (Some(token) :: Nil, _) => Right(token)
       case (Nil, _) => Left(new glasskey.model.InvalidRequest(description = "Access token missing."))
       case _ => Left(new glasskey.model.InvalidToken())
     }
 
+  def extractOrThrowEx(ctx: RequestContext): (OAuthAccessToken, Option[OIDCTokenData]) =
+    extractAccessToken(ctx) match {
+      case Left(ex) => throw new UnauthorizedException("Could not extract OAuth data from request context.")
+      case Right((token, option)) => (token, option)
+    }
+
   private def fromCookie(ctx: RequestContext): Option[(OAuthAccessToken, Option[OIDCTokenData])] =
-    (getCookieByName(env.config.providerConfig.authCookieName, ctx), getCookieByName(env.config.providerConfig.authCookieName + "_OIDC", ctx)) match {
+    (getCookieByName(OAuthConfig.providerConfig.authCookieName, ctx), getCookieByName(OAuthConfig.providerConfig.authCookieName + "_OIDC", ctx)) match {
       case (Some(token), Some(oidc)) => Some((OAuthAccessToken(None, OAuthTerms.Bearer, None, token, None), getIdTokenFromHeader(ctx)))
       case (Some(token), None) => Some((OAuthAccessToken(None, OAuthTerms.Bearer, None, token, None), None))
       case _ => None
@@ -41,7 +47,7 @@ trait BearerTokenAuthenticator[R] extends AbstractTokenAuthenticator {
       case Some(Cookie(cookies)) =>
         cookies.filter(c => c.name == name) match {
           case Nil => None
-          case cookies => Some(cookies.head.content)
+          case filteredCookies => Some(filteredCookies.head.content)
         }
       case _ => None
     }
@@ -53,13 +59,13 @@ trait BearerTokenAuthenticator[R] extends AbstractTokenAuthenticator {
     }
 
   def getIdTokenFromHeader(ctx: RequestContext): Option[OIDCTokenData] =
-    ctx.request.headers.find(_.name.toLowerCase == env.config.providerConfig.idHeaderName.toLowerCase) match {
+    ctx.request.headers.find(_.name.toLowerCase == OAuthConfig.providerConfig.idHeaderName.toLowerCase) match {
       case Some(header: HttpHeader) => idTokenHdr.fetch(header.value)
       case None => None
     }
 
   def getIdTokenFromQueryParameter(ctx: RequestContext): Option[OIDCTokenData] =
-    ctx.request.uri.query.get(env.config.providerConfig.idHeaderPrefix) match {
+    ctx.request.uri.query.get(OAuthConfig.providerConfig.idHeaderPrefix) match {
       case Some(tokenStr) => idTokenParam.fetch(tokenStr)
       case None => None
     }
@@ -71,25 +77,50 @@ trait BearerTokenAuthenticator[R] extends AbstractTokenAuthenticator {
     }
 }
 
-object BearerTokenAuthenticator {
+trait BearerTokenAuthenticator[R] extends ContextAuthenticator[ValidatedData] with BearerTokenExtractor {
 
-  import glasskey.model.ValidatedData
 
-  class Default[R](realm: String = "Secured Resource")(implicit ec: ExecutionContext,
-                                                    implicit override val env: SprayResourceRuntimeEnvironment[R])
-    extends AbstractTokenAuthenticator.Default[ValidatedData](env.config.providerConfig.authHeaderPrefix, realm) with BearerTokenAuthenticator[R] {
-
-    import glasskey.model.fetchers.IDTokenAuthHeader
+    import glasskey.model.OAuthException
     import glasskey.resource.validation.PingIdentityProtectedResourceHandler
 
-    override val idTokenHdr = new IDTokenAuthHeader.Default(env.config.providerConfig.jwksUri,
-      env.config.providerConfig.idHeaderName,
-      env.config.providerConfig.idHeaderPrefix)
-    override val idTokenParam = new IDTokenRequestParameter.Default(env.config.providerConfig.jwksUri)
-    override val handler = new PingIdentityProtectedResourceHandler[R](env.tokenValidators)
+    def tokenValidators : Iterable[Validator[R]] = Iterable.empty
+    def scheme: String
+    def realm: String
+    def handler: PingIdentityProtectedResourceHandler[R]
 
-    override def authenticator: AccessTokenAuthenticator = new DefaultAccessTokenAuthenticator.Default(handler, env)
+    def authenticator: AccessTokenAuthenticator
 
-  }
+    def rejection(wrappedEx: OAuthException, scheme: String, realm: String): Rejection = {
+      import glasskey.spray.model.OAuthRejection
+      import spray.http.HttpChallenge
+      import spray.http.HttpHeaders.`WWW-Authenticate`
+      val header = `WWW-Authenticate`(HttpChallenge(scheme, realm, Map.empty)) :: Nil
+      new OAuthRejection(wrappedEx, header)
+    }
+}
 
+object BearerTokenAuthenticator {
+
+    import scala.concurrent.{Future, ExecutionContext}
+    def apply[R](validators : Iterable[Validator[R]] = Iterable.empty)(implicit ec: ExecutionContext): BearerTokenAuthenticator[R] = new BearerTokenAuthenticator[R] {
+
+      import glasskey.resource.validation.PingIdentityProtectedResourceHandler
+      override val tokenValidators : Iterable[Validator[R]] = validators
+      override val handler = new PingIdentityProtectedResourceHandler[R](tokenValidators)
+      override val scheme: String = OAuthConfig.providerConfig.authHeaderPrefix
+      override val realm: String = "Secured Resource"
+      override val authenticator: AccessTokenAuthenticator = new DefaultAccessTokenAuthenticator.Default(handler)
+      override def apply(ctx: RequestContext): Future[Authentication[ValidatedData]] =
+        extractAccessToken(ctx) match {
+          case Left(e: OAuthException) => Future.successful(Left(rejection(e, scheme, realm)))
+          case Right(accessToken) => authenticator(accessToken).map {
+            case Some(restrictedUser) => Right(restrictedUser)
+            case None =>
+              import glasskey.model.AccessDenied
+              Left(rejection(new AccessDenied(description = "User not found."), scheme, realm))
+          } recoverWith {
+            case e: ExpiredToken => Future.successful(Left(rejection(e, scheme, realm)))
+          }
+        }
+    }
 }

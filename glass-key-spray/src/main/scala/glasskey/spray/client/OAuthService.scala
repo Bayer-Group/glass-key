@@ -139,7 +139,7 @@ trait OAuthService extends HttpService with SprayJsonSupport with OAuthRejection
 
   def oauthCall(implicit callToMake: (OAuthAccessToken) => Route, env: SprayClientRuntimeEnvironment): Route = {
     requestUri { uri =>
-      handleOAuthRejections(oauthClientRejectionHandler(getNewToken(env.tokenHelper, uri.toString(), callToMake))) {
+      handleOAuthRejections(oauthClientRejectionHandler(getNewToken(env.tokenHelper, uri.toString, callToMake))) {
         useExistingToken(callToMake)
       }
     }

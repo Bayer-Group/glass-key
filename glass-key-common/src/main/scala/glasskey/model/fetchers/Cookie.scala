@@ -1,6 +1,6 @@
 package glasskey.model.fetchers
 
-import glasskey.RuntimeEnvironment
+import glasskey.config.OAuthConfig
 import glasskey.model.{ProtectedResourceRequest, _}
 import glasskey.resource.OIDCTokenData
 import scala.language.postfixOps
@@ -10,8 +10,8 @@ import scala.language.postfixOps
 
 object Cookie {
 
-  class Default(cookieName: String, env: RuntimeEnvironment) extends AccessTokenFetcher[(OAuthAccessToken, Option[OIDCTokenData])] {
-    val idTokenHdr = new IDTokenAuthHeader.Default(env.config.providerConfig.jwksUri, env.config.providerConfig.idHeaderName, env.config.providerConfig.idHeaderPrefix)
+  class Default(cookieName: String) extends AccessTokenFetcher[(OAuthAccessToken, Option[OIDCTokenData])] {
+    val idTokenHdr = new IDTokenAuthHeader.Default(OAuthConfig.providerConfig.jwksUri, OAuthConfig.providerConfig.idHeaderName, OAuthConfig.providerConfig.idHeaderPrefix)
 
     override def matches(request: ProtectedResourceRequest): Boolean =
       request.header("Cookie").exists { header => header.contains(cookieName)}
@@ -20,7 +20,7 @@ object Cookie {
     override def fetch(request: ProtectedResourceRequest): (OAuthAccessToken, Option[OIDCTokenData]) = {
       val cookieValues = request.headers.filter(h => h._1 == "Cookie").unzip._2.flatten
       val authCookieValues = cookieValues.filter { cookieVal => cookieVal.split("=")(0) == cookieName }
-      val token = if (authCookieValues.nonEmpty && authCookieValues.head.split("=").size > 1) authCookieValues.head.split('=')(1) else throw new InvalidRequest(s"No auth token found for cookie ${cookieName}.")
+      val token = if (authCookieValues.nonEmpty && authCookieValues.head.split("=").size > 1) authCookieValues.head.split('=')(1) else throw new InvalidRequest(s"No auth token found for cookie $cookieName.")
       val idToken = if (idTokenHdr.matches(request)) idTokenHdr.fetch(request) else None
 
       (OAuthAccessToken(None,

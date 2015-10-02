@@ -1,6 +1,6 @@
 package glasskey.model.validation
 
-import glasskey.model.{BaseValidatedData, ValidatedAccessToken}
+import glasskey.model.{OAuthValidatedData, ValidatedAccessToken}
 import glasskey.model.fetchers.IDTokenFetcherMock
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -13,7 +13,7 @@ import scala.util.parsing.combinator.RegexParsers
 class OAuthAuthorizationClaimParserSpec extends FlatSpec with Matchers with RegexParsers with IDTokenFetcherMock with OAuthAuthorizationClaimParser {
 
   override val token = Some(ValidatedAccessToken(Some("OUR_AWESOME_CLIENT"), None, None, Some("openid"), None, None,
-    BaseValidatedData(Some("loande"), Some("loande"), Some("Monsanto"), Some("OUR_AWESOME_CLIENT"))))
+    OAuthValidatedData(Some("loande"), Some("loande"), Some("Monsanto"), Some("OUR_AWESOME_CLIENT"))))
 
   val clientIdClaim = hasClientId("OUR_AWESOME_CLIENT")
   val scopeClaim = hasScope("openid")

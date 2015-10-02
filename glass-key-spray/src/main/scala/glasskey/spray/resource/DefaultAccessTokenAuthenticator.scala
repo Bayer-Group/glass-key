@@ -1,7 +1,6 @@
 package glasskey.spray.resource
 
-import glasskey.RuntimeEnvironment
-import glasskey.model.{ValidatedToken, ValidatedData, ValidatedAccessToken, OAuthAccessToken}
+import glasskey.model.{ValidatedToken, ValidatedData, OAuthAccessToken}
 import glasskey.resource.OIDCTokenData
 
 trait DefaultAccessTokenAuthenticator extends AccessTokenAuthenticator {
@@ -20,14 +19,14 @@ object DefaultAccessTokenAuthenticator {
 
   import scala.concurrent.ExecutionContext
 
-  class Default(handler: ProtectedResourceHandler[ValidatedData, ValidatedToken], env: RuntimeEnvironment)(implicit val ec: ExecutionContext)
+  class Default(handler: ProtectedResourceHandler[ValidatedData, ValidatedToken])(implicit val ec: ExecutionContext)
     extends AccessTokenAuthenticator with DefaultAccessTokenAuthenticator {
 
     import glasskey.resource.ProtectedResource
 
     import scala.concurrent.Future
 
-    val resource = new ProtectedResource.Default(env)
+    val resource = new ProtectedResource.Default
 
     override def apply(accessToken: (OAuthAccessToken, Option[OIDCTokenData])): Future[Option[ValidatedData]] =
       attemptAuth(accessToken) flatMap Future.successful

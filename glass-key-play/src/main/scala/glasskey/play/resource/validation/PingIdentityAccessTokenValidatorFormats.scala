@@ -3,6 +3,7 @@ package glasskey.play.resource.validation
 import glasskey.model.OAuthErrorHelper
 
 import scala.language.implicitConversions
+import glasskey.model.validation.RBACAuthZData
 
 
 object PingIdentityAccessTokenValidatorFormats extends OAuthErrorHelper {
@@ -13,7 +14,12 @@ object PingIdentityAccessTokenValidatorFormats extends OAuthErrorHelper {
   import play.api.libs.json.Reads._
   import play.api.libs.json._
 
-  implicit val baseValidatedFormat = (
+  val baseValidatedWrites: Writes[BaseValidatedData] =
+    (__ \ "user_id").writeNullable[String].contramap { (base: BaseValidatedData) => base.user_id }
+
+  val baseValidatedReads = (__ \ 'user_id).readNullable[String].map{ l => BaseValidatedData(l) }
+
+  implicit val oauthValidatedFormat = (
     (__ \ "Username").readNullable[String]
       ~ (__ \ "user_id").readNullable[String]
       ~ (__ \ "OrgName").readNullable[String]
@@ -21,7 +27,7 @@ object PingIdentityAccessTokenValidatorFormats extends OAuthErrorHelper {
       ~ (__ \ "scopes").readNullable[Set[String]]
     )
 
-  implicit val baseValidatedReads: Reads[BaseValidatedData] = (baseValidatedFormat)(BaseValidatedData)
+  implicit val oauthValidatedReads: Reads[OAuthValidatedData] = (oauthValidatedFormat)(OAuthValidatedData)
 
   implicit val accessTokenFormat = (
     (__ \ OAuthTerms.RefreshToken).readNullable[String]
@@ -40,7 +46,7 @@ object PingIdentityAccessTokenValidatorFormats extends OAuthErrorHelper {
       ~ (__ \ "scope").read[Option[String]]
       ~ (__ \ "token_type").read[Option[String]]
       ~ (__ \ "expires_in").read[Option[Long]]
-      ~ (__ \ "access_token").read[BaseValidatedData](baseValidatedReads)
+      ~ (__ \ "access_token").read[OAuthValidatedData](oauthValidatedReads)
     )
 
   implicit val validatedTokenReads: Reads[ValidatedAccessToken] = (validatedTokenFormat)(ValidatedAccessToken)
@@ -92,6 +98,12 @@ object PingIdentityAccessTokenValidatorFormats extends OAuthErrorHelper {
     )
 
   implicit val entitlementValidationReads: Reads[ValidatedEntitlementAccessToken] = (entitlementValidationFormat)(ValidatedEntitlementAccessToken)
+
+  implicit val rbacFormat = (
+    (__ \ "app").read[String]
+    ~ (__ \ "entitlements").read[Set[String]]
+    )
+  implicit val rbacReads: Reads[RBACAuthZData] = (rbacFormat)(RBACAuthZData)
 
   //  implicit def errorCodeToErrorString[A](e: OAuthException): OAuthValidationError = new OAuthValidationError(e.errorType, e.description, Some(e.statusCode))
 }

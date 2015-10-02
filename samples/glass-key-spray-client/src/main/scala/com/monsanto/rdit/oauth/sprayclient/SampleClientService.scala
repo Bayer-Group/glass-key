@@ -8,17 +8,16 @@ import spray.routing._
 /**
  * Created by LOANDE on 1/8/2015.
  */
-abstract class SampleClientService(override val actorRefFactory: ActorRefFactory)(implicit val env: SprayClientRuntimeEnvironment) extends OAuthService {
+abstract class SampleClientService(override val actorRefFactory: ActorRefFactory) extends OAuthService {
+  def helloWorldRoute(implicit env: SprayClientRuntimeEnvironment): Route
 
-  def helloWorldRoute: Route
-
-  def doHelloWorld(tokenValue: OAuthAccessToken):Route = HelloWorldAction.hello(tokenValue)
+  def doHelloWorld(tokenValue: OAuthAccessToken)(implicit env: SprayClientRuntimeEnvironment):Route = HelloWorldAction.hello(tokenValue)
 
   def printToken(tokenValue: OAuthAccessToken):Route = {
     complete(s"here's the token ${tokenValue.access_token}")
   }
 
-  def refresh(tokenValue: OAuthAccessToken):Route = {
+  def refresh(tokenValue: OAuthAccessToken)(implicit env: SprayClientRuntimeEnvironment):Route = {
     refreshToken(tokenValue.refresh_token.get)
   }
 

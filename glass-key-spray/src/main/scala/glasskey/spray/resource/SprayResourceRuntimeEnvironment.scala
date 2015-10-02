@@ -1,20 +1,26 @@
 package glasskey.spray.resource
 
-import glasskey.RuntimeEnvironment
-import glasskey.config.OAuthConfig
-import glasskey.resource.validation.{ValidationResponse, OAuthValidator}
+import glasskey.config.{OAuthConfig, ClientConfig}
+import glasskey.resource.validation.{ValidationResponse, Validator}
 import glasskey.spray.resource.validation.SprayOAuthValidator
 
 import scala.concurrent.ExecutionContext
 
-class SprayResourceRuntimeEnvironment[R](config: OAuthConfig, val tokenValidators: Iterable[OAuthValidator[R]]) extends RuntimeEnvironment(config)
+class SprayResourceRuntimeEnvironment[R](val tokenValidators: Iterable[Validator[R]] = Iterable.empty)
 
 object SprayResourceRuntimeEnvironment {
 
-  def apply(clientConfigKey: String, config: OAuthConfig)(implicit ec: ExecutionContext) = {
-    val clientConfig = config.clients(clientConfigKey)
-    new SprayResourceRuntimeEnvironment[ValidationResponse](config,
-      Seq(new SprayOAuthValidator.Default(config.providerConfig, clientConfig)))
+  def apply(validators: Iterable[Validator[ValidationResponse]])(implicit ec: ExecutionContext): SprayResourceRuntimeEnvironment[ValidationResponse] = {
+    new SprayResourceRuntimeEnvironment[ValidationResponse](validators)
   }
 
+  def apply(clientConfigKey: String)(implicit ec: ExecutionContext): SprayResourceRuntimeEnvironment[ValidationResponse] = {
+    val clientConfig = OAuthConfig.clients(clientConfigKey)
+    this(clientConfig)
+  }
+
+  def apply(clientConfig: ClientConfig)(implicit ec: ExecutionContext): SprayResourceRuntimeEnvironment[ValidationResponse] = {
+    new SprayResourceRuntimeEnvironment[ValidationResponse](
+      Seq(new SprayOAuthValidator.Default(clientConfig)))
+  }
 }

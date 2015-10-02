@@ -16,7 +16,7 @@ object Boot {
   implicit val system = ActorSystem("oauth-client-actor-system")
 
   def main(args: Array[String]): Unit = {
-    val app = new OAuthClientActorService();
+    val app = new OAuthClientActorService()
     app.run(args)
   }
 }
@@ -35,10 +35,9 @@ class OAuthClientActorService(implicit system: ActorSystem) {
       }
     })
 
-    val defaultConfig = new OAuthConfig.Default()
     /* Spray Service */
     val rootActor = system.actorOf(Props(classOf[HelloWorldClientActor]), "oauth-client-actor-system")
-    IO(Http).tell(Http.Bind(rootActor, defaultConfig.httpConfig.Interface, defaultConfig.httpConfig.Port), callbackActor)
+    IO(Http).tell(Http.Bind(rootActor, OAuthConfig.httpConfig.Interface, OAuthConfig.httpConfig.Port), callbackActor)
 
     log.info("OAuth Service Ready")
   }

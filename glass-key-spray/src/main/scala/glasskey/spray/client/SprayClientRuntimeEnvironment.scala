@@ -1,11 +1,10 @@
 package glasskey.spray.client
 
 import glasskey.db.DAOService
-import glasskey.{ClientRuntimeEnvironment, RuntimeEnvironment}
+import glasskey.ClientRuntimeEnvironment
 import glasskey.config.OAuthConfig
-import glasskey.config.OAuthConfig.Default
 
-class SprayClientRuntimeEnvironment(config: OAuthConfig, val tokenHelper: SprayOAuthAccessTokenHelper) extends RuntimeEnvironment(config) with ClientRuntimeEnvironment{
+class SprayClientRuntimeEnvironment(val tokenHelper: SprayOAuthAccessTokenHelper) extends ClientRuntimeEnvironment{
   import glasskey.db.DBTokenService
   import glasskey.model.OAuthAccessToken
 
@@ -13,15 +12,15 @@ class SprayClientRuntimeEnvironment(config: OAuthConfig, val tokenHelper: SprayO
 }
 
 object SprayClientRuntimeEnvironment {
-  def apply(clientConfigKey: String, config: OAuthConfig) = {
-    val clientConfig = config.clients(clientConfigKey)
-    new SprayClientRuntimeEnvironment(config, new SprayOAuthAccessTokenHelper(clientConfig, config.providerConfig))
+  def apply(clientConfigKey: String) = {
+    val clientConfig = OAuthConfig.clients(clientConfigKey)
+    new SprayClientRuntimeEnvironment(new SprayOAuthAccessTokenHelper(clientConfig))
   }
   def apply(clientId: String, clientSecret: Option[String], apiRedirectUri: Option[String],
             resourceOwnerUsername: Option[String], resourceOwnerPassword: Option[String],
             grantType: String, authUrl: String, accessTokenUrl: String,
             providerWantsBasicAuth : Boolean) = {
-    new SprayClientRuntimeEnvironment(new Default(), new SprayOAuthAccessTokenHelper(clientId,
+    new SprayClientRuntimeEnvironment(new SprayOAuthAccessTokenHelper(clientId,
       clientSecret, apiRedirectUri, resourceOwnerUsername, resourceOwnerPassword, grantType, authUrl,
       accessTokenUrl, providerWantsBasicAuth))
   }

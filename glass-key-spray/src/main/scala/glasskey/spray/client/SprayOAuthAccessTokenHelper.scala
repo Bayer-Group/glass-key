@@ -1,7 +1,7 @@
 package glasskey.spray.client
 
 import akka.actor.ActorSystem
-import glasskey.config.{OAuthProviderConfig, ClientConfig}
+import glasskey.config.{OAuthConfig, ClientConfig}
 import glasskey.model.{OAuthAccessToken, OAuthAccessTokenHelper}
 import glasskey.spray.resource.validation.PingValidationJsonProtocol
 import spray.http.BasicHttpCredentials
@@ -15,10 +15,10 @@ class SprayOAuthAccessTokenHelper(clientId: String, clientSecret: Option[String]
 extends OAuthAccessTokenHelper.Default(clientId, clientSecret, apiRedirectUri, resourceOwnerUsername,
   resourceOwnerPassword, grantType, authUrl, accessTokenUri, providerWantsBasicAuth)  {
 
-  def this(clientConfig: ClientConfig, providerConfig: OAuthProviderConfig) = this(clientConfig.clientId.get,
+  def this(clientConfig: ClientConfig) = this(clientConfig.clientId.get,
     clientConfig.clientSecret, clientConfig.apiRedirectUri, clientConfig.userName, clientConfig.userPassword,
-    clientConfig.grantType.get, providerConfig.authUrl, providerConfig.accessTokenUrl,
-    providerConfig.providerWantsBasicAuth)
+    clientConfig.grantType.get, OAuthConfig.providerConfig.authUrl, OAuthConfig.providerConfig.accessTokenUrl,
+    OAuthConfig.providerConfig.providerWantsBasicAuth)
 
   implicit val system = ActorSystem()
 

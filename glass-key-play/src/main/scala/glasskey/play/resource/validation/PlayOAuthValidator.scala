@@ -1,8 +1,11 @@
 package glasskey.play.resource.validation
 
-import glasskey.config.{ClientConfig, OAuthProviderConfig}
+import glasskey.model.OAuthAccessToken
+import glasskey.resource.OIDCTokenData
 import glasskey.resource.validation.OAuthValidator
 import play.api.libs.ws.WSResponse
+import glasskey.config.OAuthConfig
+import glasskey.config.ClientConfig
 
 import scala.concurrent.ExecutionContext
 
@@ -14,13 +17,13 @@ trait PlayOAuthValidator extends OAuthValidator[WSResponse] {
 
   def validationUrl: String
 
-  override def getValidationResponse(accessToken: String)(implicit ec: ExecutionContext): Future[WSResponse] = {
+  override def getValidationResponse(tokenData: (OAuthAccessToken, Option[OIDCTokenData]))(implicit ec: ExecutionContext): Future[WSResponse] = {
     import com.ning.http.client.AsyncHttpClientConfig
     import play.api.Play.current
     import play.api.libs.ws.ning.{NingAsyncHttpClientConfigBuilder, NingWSClient}
     import play.api.libs.ws.{DefaultWSClientConfig, WS, WSRequestHolder}
 
-    val queryString = validationParams(accessToken)
+    val queryString = validationParams(tokenData._1.access_token)
       .foldLeft("")((a, t) => a + (t._1 + "=" + t._2 + "&"))
       .dropRight(1)
 
@@ -61,7 +64,7 @@ object PlayOAuthValidator {
   class Default[U <: ValidatedData](override val validationUrl: String, override val grantType: String,
                                 override val clientSecret: String, override val clientId: String)
     extends OAuthValidator[WSResponse] with PlayOAuthValidator {
-    def this(providerConfig: OAuthProviderConfig, clientConfig: ClientConfig) = this(providerConfig.validationUri,
-      providerConfig.validationGrantType, clientConfig.clientSecret.get, clientConfig.clientId.get)
+    def this(clientConfig: ClientConfig) = this(OAuthConfig.providerConfig.validationUri,
+      OAuthConfig.providerConfig.validationGrantType, clientConfig.clientSecret.get, clientConfig.clientId.get)
   }
 }

@@ -15,6 +15,7 @@ trait OAuthProviderConfig {
   val idHeaderName : String
   val idHeaderPrefix : String
   val authCookieName : String
+  val entitlementUri : String
   val validationUri : String
   val jwksUri : String
   val validationGrantType : String
@@ -29,6 +30,7 @@ object OAuthProviderConfig {
     val idHeaderName = c.getString("idHeaderName")
     val idHeaderPrefix = c.getString("idHeaderPrefix")
     val authCookieName = c.getString("authCookieName")
+    val entitlementUri = c.getString("entitlement-uri")
     val validationUri = c.getString("validation-uri")
     val jwksUri = c.getString("jwksUri")
     val validationGrantType = c.getString("validation-grant-type")

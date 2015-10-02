@@ -1,8 +1,9 @@
 package glasskey.play.resource
 
+import glasskey.config.OAuthConfig
 import glasskey.model.ValidatedData
 import glasskey.play.resource.validation.PingIdentityAccessTokenValidatorFormats
-import glasskey.resource.validation.OAuthValidator
+import glasskey.resource.validation.Validator
 import play.api.libs.ws.WSResponse
 import play.api.mvc._
 
@@ -24,7 +25,7 @@ trait OAuthAction {
 
   def resource: ProtectedResource
 
-  def tokenValidators : Iterable[OAuthValidator[WSResponse]]
+  def tokenValidators : Iterable[Validator[WSResponse]]
 
   implicit val env : PlayResourceRuntimeEnvironment[WSResponse]
 
@@ -80,7 +81,7 @@ trait OAuthAction {
   def addWWWAuthHeader(result: Result, errorString: String): Result = result.withHeaders("WWW-Authenticate" -> errorString)
 
   def responseOAuthError(e: ValidationError): Result =
-    addWWWAuthHeader(Unauthorized(Json.toJson(e)), s"${env.config.providerConfig.authHeaderPrefix} " + toOAuthErrorString(e))
+    addWWWAuthHeader(Unauthorized(Json.toJson(e)), s"${OAuthConfig.providerConfig.authHeaderPrefix} " + toOAuthErrorString(e))
 }
 
 object OAuthAction {
@@ -89,7 +90,7 @@ object OAuthAction {
     action.apply(block)
   }
 
-  def apply[T](block: OAuthRequest[AnyContent] => play.api.mvc.Result, jwksUri: String, tokenValidators: Iterable[OAuthValidator[WSResponse]])(implicit ec:ExecutionContext, env: PlayResourceRuntimeEnvironment[WSResponse]) = {
+  def apply[T](block: OAuthRequest[AnyContent] => play.api.mvc.Result, jwksUri: String, tokenValidators: Iterable[Validator[WSResponse]])(implicit ec:ExecutionContext, env: PlayResourceRuntimeEnvironment[WSResponse]) = {
     val action = new OAuthAction.DefaultWithValues[T](jwksUri, tokenValidators)
     action.apply(block)
   }
@@ -98,14 +99,14 @@ object OAuthAction {
 
     import glasskey.resource.ProtectedResource
 
-    override val resource = new ProtectedResource.Default(env)
+    override val resource = new ProtectedResource.Default
     override val tokenValidators = env.tokenValidators
   }
 
-  class DefaultWithValues[T](jwksUri: String, override val tokenValidators: Iterable[OAuthValidator[WSResponse]])(implicit val ec: ExecutionContext, val env: PlayResourceRuntimeEnvironment[WSResponse]) extends ActionBuilder[OAuthRequest] with OAuthAction{
+  class DefaultWithValues[T](jwksUri: String, override val tokenValidators: Iterable[Validator[WSResponse]])(implicit val ec: ExecutionContext, val env: PlayResourceRuntimeEnvironment[WSResponse]) extends ActionBuilder[OAuthRequest] with OAuthAction{
 
     import glasskey.resource.ProtectedResource
 
-    override val resource = new ProtectedResource.Default(env)
+    override val resource = new ProtectedResource.Default
   }
 }

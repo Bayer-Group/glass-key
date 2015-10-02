@@ -16,7 +16,7 @@ object Boot {
   implicit val system = ActorSystem("oauth-resource-actor-system")
 
   def main(args: Array[String]): Unit = {
-    val app = new OAuthClientActorService();
+    val app = new OAuthClientActorService()
     app.run(args)
   }
 }
@@ -34,10 +34,9 @@ class OAuthClientActorService(implicit system: ActorSystem) {
         case all => log.debug("Backend Service Received a message from Akka.IO: " + all.toString)
       }
     })
-    val defaultConfig = new OAuthConfig.Default()
     /* Spray Service */
     val rootActor = system.actorOf(Props(classOf[HelloWorldResourceServiceActor]), "oauth-resource-actor-system")
-    IO(Http).tell(Http.Bind(rootActor, defaultConfig.httpConfig.Interface, defaultConfig.httpConfig.Port), callbackActor)
+    IO(Http).tell(Http.Bind(rootActor, OAuthConfig.httpConfig.Interface, OAuthConfig.httpConfig.Port), callbackActor)
 
     log.info("OAuth Resource Service Ready")
   }

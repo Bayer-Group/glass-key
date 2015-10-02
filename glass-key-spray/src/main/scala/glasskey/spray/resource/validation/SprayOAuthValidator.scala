@@ -1,7 +1,9 @@
 package glasskey.spray.resource.validation
 
-import glasskey.config.{ClientConfig, OAuthProviderConfig}
+import glasskey.config.{ClientConfig, OAuthConfig}
 import glasskey.resource.validation.ValidationResponse
+import glasskey.model.OAuthAccessToken
+import glasskey.resource.OIDCTokenData
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -18,8 +20,8 @@ object SprayOAuthValidator {
                 override val clientSecret: String, override val clientId: String)
     extends OAuthValidator[ValidationResponse] with SprayValidatorType with OAuthErrorHelper {
 
-    def this(providerConfig: OAuthProviderConfig, clientConfig: ClientConfig) = this(providerConfig.validationUri,
-      providerConfig.validationGrantType, clientConfig.clientSecret.get, clientConfig.clientId.get)
+    def this(clientConfig: ClientConfig) = this(OAuthConfig.providerConfig.validationUri,
+      OAuthConfig.providerConfig.validationGrantType, clientConfig.clientSecret.get, clientConfig.clientId.get)
 
     import akka.actor.ActorSystem
     import akka.event.{LogSource, Logging}
@@ -42,7 +44,7 @@ object SprayOAuthValidator {
 
     def showResponse(response: HttpResponse): Unit = log.debug("Something got here. Response is : " + response)
 
-    override def getValidationResponse(accessToken: String)(implicit ec: ExecutionContext): Future[ValidationResponse] = {
+    override def getValidationResponse(tokenData: (OAuthAccessToken, Option[OIDCTokenData]))(implicit ec: ExecutionContext): Future[ValidationResponse] = {
       import glasskey.spray.resource.validation.PingValidationJsonProtocol._
       import spray.client.pipelining._
       import spray.http.FormData
@@ -54,7 +56,7 @@ object SprayOAuthValidator {
         ~> decode(Deflate)
         ~> logResponse(showResponse _)
         ~> unmarshal[ValidationResponse])
-      pipeline(Post(validationUri, FormData(validationParams(accessToken))))
+      pipeline(Post(validationUri, FormData(validationParams(tokenData._1.access_token))))
     }
 
     override def validate(resp: Future[ValidationResponse])(implicit ec: ExecutionContext): Future[ValidatedAccessToken] =

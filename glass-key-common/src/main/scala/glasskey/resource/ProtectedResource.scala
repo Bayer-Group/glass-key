@@ -1,6 +1,6 @@
 package glasskey.resource
 
-import glasskey.RuntimeEnvironment
+import glasskey.config.OAuthConfig
 import glasskey.model.fetchers.Cookie
 import glasskey.model.{ValidatedToken, OAuthAccessToken}
 
@@ -11,9 +11,7 @@ trait ProtectedResource {
 
   import scala.concurrent.{ExecutionContext, Future}
 
-  def env: RuntimeEnvironment
-
-  val fetchers = Seq(new AuthHeader.Default(env), new RequestParameter.Default(env.config.providerConfig.jwksUri), new Cookie.Default(env.config.providerConfig.authCookieName, env))
+  val fetchers = Seq(new AuthHeader.Default, new RequestParameter.Default(OAuthConfig.providerConfig.jwksUri), new Cookie.Default(OAuthConfig.providerConfig.authCookieName))
 
   def handleRequest[R](request: R, handler: ProtectedResourceHandler[ValidatedData, ValidatedToken])(implicit ec: ExecutionContext): Future[ValidatedData] =
     request match {
@@ -39,6 +37,6 @@ trait ProtectedResource {
 
 object ProtectedResource {
 
-  class Default(override val env: RuntimeEnvironment) extends ProtectedResource
+  class Default extends ProtectedResource
 
 }

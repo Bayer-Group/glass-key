@@ -1,6 +1,7 @@
 package glasskey.spray.resource.validation
 
-import glasskey.model.{ValidatedEntitlementData, ValidatedEntitlementAccessToken, BaseValidatedData}
+import glasskey.model.validation.RBACAuthZData
+import glasskey.model.{OAuthValidatedData, ValidatedEntitlementData, ValidatedEntitlementAccessToken, BaseValidatedData}
 import spray.json._
 
 object PingValidationJsonProtocol extends DefaultJsonProtocol {
@@ -8,9 +9,11 @@ object PingValidationJsonProtocol extends DefaultJsonProtocol {
   import glasskey.model.{OAuthAccessToken, ValidatedAccessToken, ValidationError}
 
   implicit val pingValidationErrorFormat = jsonFormat3(ValidationError)
-  implicit val pingValidDataFormat = jsonFormat5(BaseValidatedData)
+  implicit val baseValidatedFormat = jsonFormat1(BaseValidatedData)
+  implicit val pingValidDataFormat = jsonFormat5(OAuthValidatedData)
   implicit val pingAccesstokenFormat = jsonFormat7(ValidatedAccessToken)
   implicit val pingOAuthAccesstokenFormat = jsonFormat5(OAuthAccessToken)
+  implicit val rbacFormat = jsonFormat2(RBACAuthZData)
 
   implicit def entitlementValidatedDataFormat = jsonFormat[Option[String], Option[String], Option[String], Either[Set[String], String],
     Option[String], Option[Set[String]], ValidatedEntitlementData](ValidatedEntitlementData.apply,

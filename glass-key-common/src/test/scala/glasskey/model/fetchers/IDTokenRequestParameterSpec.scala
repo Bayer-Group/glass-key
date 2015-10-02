@@ -1,19 +1,18 @@
 package glasskey.model.fetchers
 
+import glasskey.config.OAuthConfig
 import glasskey.model.{OAuthAccessToken, OAuthTerms, ProtectedResourceRequest}
 import glasskey.resource._
-import glasskey.{NeutralTestRuntimeEnvironment, RuntimeEnvironment}
 import org.scalatest.{FlatSpec, Matchers}
 
 /**
  * Created by loande on 3/4/15.
  */
-class IDTokenRequestParameterMock(implicit env: RuntimeEnvironment) extends IDTokenRequestParameter.Default(env.config.providerConfig.jwksUri) with IDTokenFetcherMock {
+class IDTokenRequestParameterMock extends IDTokenRequestParameter.Default(OAuthConfig.providerConfig.jwksUri) with IDTokenFetcherMock {
   override val decoder = mockDecoder
 }
 
 class IDTokenRequestParameterSpec  extends FlatSpec with Matchers {
-  implicit val env = new NeutralTestRuntimeEnvironment()
 
   val idTokenRequestParamFetcher = new IDTokenRequestParameterMock()
 

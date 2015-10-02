@@ -1,6 +1,5 @@
 package glasskey.model.fetchers
 
-import glasskey.NeutralTestRuntimeEnvironment
 import glasskey.model.{OAuthTerms, _}
 import glasskey.resource.{Audience, OIDCTokenData}
 import org.scalatest.{FlatSpec, Matchers}
@@ -12,9 +11,7 @@ import org.scalatest.{FlatSpec, Matchers}
 
 class AuthHeaderSpec extends FlatSpec with Matchers {
 
-  implicit val env = new NeutralTestRuntimeEnvironment()
-
-  val authHdrFetcher = new AuthHeader.Default(env)
+  val authHdrFetcher = new AuthHeader.Default
 
   val fakeToken = new OAuthAccessToken(None,
     OAuthTerms.Bearer,

@@ -9,10 +9,12 @@ trait ValidatedToken {
   val access_token: ValidatedData
 }
 
+case class BaseValidatedAccessToken(client_id: Option[String], access_token: BaseValidatedData) extends ValidatedToken
+
 case class ValidatedAccessToken(client_id: Option[String],
                                      token: Option[String],
                                      refreshToken: Option[String],
                                      scope: Option[String],
                                      token_type: Option[String],
                                      expires_in: Option[Long],
-                                     access_token: BaseValidatedData) extends ValidatedToken
+                                     access_token: OAuthValidatedData) extends ValidatedToken

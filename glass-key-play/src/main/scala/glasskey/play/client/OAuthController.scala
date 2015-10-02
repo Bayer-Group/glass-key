@@ -5,6 +5,7 @@ import _root_.play.api.Play.current
 import _root_.play.api.http.HeaderNames
 import _root_.play.api.libs.ws.{WS, WSRequestHolder, WSResponse}
 import _root_.play.api.mvc._
+import glasskey.config.OAuthConfig
 import glasskey.play.resource.validation.PingIdentityAccessTokenValidatorFormats._
 import play.api.libs.json.{JsError, JsSuccess}
 
@@ -109,11 +110,11 @@ object OAuthController {
       }
 
     private def grabAuthTokenHeader: PartialFunction[(String), (String, String)] = {
-      case (data) => HeaderNames.AUTHORIZATION -> (s"${env.config.providerConfig.authHeaderPrefix} " + data)
+      case (data) => HeaderNames.AUTHORIZATION -> (s"${OAuthConfig.providerConfig.authHeaderPrefix} " + data)
     }
 
     private def grabIDTokenHeader: PartialFunction[(Option[String]), Option[(String, String)]] = {
-      case Some(data) => Some(env.config.providerConfig.idHeaderName -> (s"${env.config.providerConfig.idHeaderPrefix} " + data))
+      case Some(data) => Some(OAuthConfig.providerConfig.idHeaderName -> (s"${OAuthConfig.providerConfig.idHeaderPrefix} " + data))
       case None => None
     }
 

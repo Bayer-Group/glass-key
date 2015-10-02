@@ -1,23 +1,21 @@
 package glasskey.model.fetchers
 
+import glasskey.config.OAuthConfig
 import glasskey.model.{OAuthAccessToken, OAuthTerms, ProtectedResourceRequest}
 import glasskey.resource._
-import glasskey.{NeutralTestRuntimeEnvironment, RuntimeEnvironment}
 import org.scalatest.{FlatSpec, Matchers}
 
 /**
   * Created by loande on 3/2/15.
   */
 
-class IDTokenAuthHdrMock(implicit env: RuntimeEnvironment) extends IDTokenAuthHeader.Default(env.config.providerConfig.jwksUri,
-  env.config.providerConfig.idHeaderName, env.config.providerConfig.idHeaderPrefix) with IDTokenFetcherMock {
+class IDTokenAuthHdrMock extends IDTokenAuthHeader.Default(OAuthConfig.providerConfig.jwksUri,
+  OAuthConfig.providerConfig.idHeaderName, OAuthConfig.providerConfig.idHeaderPrefix) with IDTokenFetcherMock {
   override val decoder = mockDecoder
 }
 
 
 class IDTokenAuthHeaderSpec extends FlatSpec with Matchers {
-
-   implicit val env = new NeutralTestRuntimeEnvironment()
 
    val idTokenAuthHeaderFetcher = new IDTokenAuthHdrMock()
 

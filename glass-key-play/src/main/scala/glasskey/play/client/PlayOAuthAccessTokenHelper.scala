@@ -1,6 +1,6 @@
 package glasskey.play.client
 
-import glasskey.config.{OAuthProviderConfig, ClientConfig}
+import glasskey.config.{OAuthConfig, ClientConfig}
 import glasskey.model.{OAuthAccessTokenHelper, OAuthException, ValidationError, _}
 import glasskey.play.resource.validation.PingIdentityAccessTokenValidatorFormats._
 import play.api.Play.current
@@ -20,10 +20,10 @@ class PlayOAuthAccessTokenHelper(clientId: String, clientSecret: Option[String],
 OAuthAccessTokenHelper.Default(clientId, clientSecret, apiRedirectUri, resourceOwnerUsername,
   resourceOwnerPassword, grantType, authUrl, accessTokenUri, providerWantsBasicAuth)  {
 
-  def this(clientConfig: ClientConfig, providerConfig: OAuthProviderConfig) = this(clientConfig.clientId.get,
+  def this(clientConfig: ClientConfig) = this(clientConfig.clientId.get,
     clientConfig.clientSecret, clientConfig.apiRedirectUri, clientConfig.userName, clientConfig.userPassword,
-    clientConfig.grantType.get, providerConfig.authUrl, providerConfig.accessTokenUrl,
-    providerConfig.providerWantsBasicAuth)
+    clientConfig.grantType.get, OAuthConfig.providerConfig.authUrl, OAuthConfig.providerConfig.accessTokenUrl,
+    OAuthConfig.providerConfig.providerWantsBasicAuth)
 
   def generateToken(params: (String, String)*)(implicit ec: ExecutionContext): Future[Option[OAuthAccessToken]] = {
     val tokenResponse = WS.url(getQueryString(accessTokenUri, params: _*)).
@@ -39,9 +39,9 @@ OAuthAccessTokenHelper.Default(clientId, clientSecret, apiRedirectUri, resourceO
     }
   }
   def parseToken(value: JsValue): Either[OAuthAccessToken, OAuthException] = {
-    (value).validate[ValidationError] match {
+    value.validate[ValidationError] match {
       case s: JsSuccess[ValidationError] => Right(toOAuthErrorFromDescription(s.get.error_description))
-      case e: JsError => Left((value).validate[OAuthAccessToken].get)
+      case e: JsError => Left(value.validate[OAuthAccessToken].get)
     }
   }
 }

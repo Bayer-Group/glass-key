@@ -1,6 +1,6 @@
 package glasskey.model.fetchers
 
-import glasskey.NeutralTestRuntimeEnvironment
+import glasskey.config.OAuthConfig
 import glasskey.model._
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -9,8 +9,7 @@ import org.scalatest.{FlatSpec, Matchers}
  */
 class RequestParameterSpec extends FlatSpec with Matchers {
 
-  implicit val env = new NeutralTestRuntimeEnvironment()
-  val reqParamFetcher = new RequestParameter.Default(env.config.providerConfig.jwksUri)
+  val reqParamFetcher = new RequestParameter.Default(OAuthConfig.providerConfig.jwksUri)
 
 
   val fakeToken = new OAuthAccessToken(None,

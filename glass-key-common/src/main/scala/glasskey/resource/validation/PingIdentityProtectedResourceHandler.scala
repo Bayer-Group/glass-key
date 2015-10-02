@@ -12,7 +12,7 @@ import scala.util.{Failure, Success}
  * Created by loande on 12/1/2014.
  */
 
-class PingIdentityProtectedResourceHandler[R](tokenValidators : Iterable[OAuthValidator[R]]) extends ProtectedResourceHandler[ValidatedData, ValidatedToken] {
+class PingIdentityProtectedResourceHandler[R](tokenValidators : Iterable[Validator[R]]) extends ProtectedResourceHandler[ValidatedData, ValidatedToken] {
 
   /**
    * Find authorized information by access token.
@@ -33,9 +33,10 @@ class PingIdentityProtectedResourceHandler[R](tokenValidators : Iterable[OAuthVa
    */
 
   // ERROR RESPONSE looks like : {"error":"invalid_grant","error_description":"token expired"}
-  override def validateToken(token: (OAuthAccessToken, Option[OIDCTokenData]))(implicit ec: ExecutionContext): Future[ValidatedToken] = {
-    allSucceed[ValidatedToken](tokenValidators.map(validator => validator.validate(validator.getValidationResponse(token._1.access_token))))
-  }
+  override def validateToken(token: (OAuthAccessToken, Option[OIDCTokenData]))(implicit ec: ExecutionContext): Future[ValidatedToken] =
+    allSucceed[ValidatedToken](tokenValidators.map(validator =>
+      validator.validate(validator.getValidationResponse(token))
+    ))
 
   // Nondeterministic.
   // If any failure, return it immediately, else return the final success.

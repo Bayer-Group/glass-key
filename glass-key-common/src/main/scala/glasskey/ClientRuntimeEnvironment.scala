@@ -1,6 +1,6 @@
 package glasskey
 
-trait ClientRuntimeEnvironment extends RuntimeEnvironment {
+trait ClientRuntimeEnvironment {
 
   import glasskey.db.DAOService
   import glasskey.model.OAuthAccessToken

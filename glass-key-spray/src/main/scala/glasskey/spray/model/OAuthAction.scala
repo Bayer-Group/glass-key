@@ -1,12 +1,11 @@
 package glasskey.spray.model
 
-import glasskey.spray.client.SprayClientRuntimeEnvironment
+import glasskey.config.OAuthConfig
 import spray.http.HttpHeader
 
 trait OAuthAction {
 
     import akka.actor.ActorSystem
-    import glasskey.RuntimeEnvironment
     import spray.client.pipelining._
     import spray.http.HttpHeaders.RawHeader
     import spray.http.HttpRequest
@@ -22,19 +21,19 @@ trait OAuthAction {
 
     def getHeaderedPipeline[T](token: String,
                                id_token: Option[String] = None, addlHdrs : Option[List[HttpHeader]] = None)
-                              (implicit evidence: FromResponseUnmarshaller[T],
-                               env: SprayClientRuntimeEnvironment): HttpRequest => Future[T] =
+                              (implicit evidence: FromResponseUnmarshaller[T]): HttpRequest => Future[T] =
       (getHeaders(token, id_token, addlHdrs)
         ~> encode(Gzip)
         ~> sendReceive
         ~> decode(Deflate) ~> decode(Gzip)
         ~> unmarshal[T])
 
-    def getHeaders(accessToken: String, id_token: Option[String], addlHdrs : Option[List[HttpHeader]])(implicit env: RuntimeEnvironment): RequestTransformer =
-      getHeaders(accessToken, id_token, env.config.providerConfig.authHeaderName,
-        env.config.providerConfig.authHeaderPrefix,
-        env.config.providerConfig.idHeaderName,
-        env.config.providerConfig.idHeaderPrefix, addlHdrs)
+    def getHeaders(accessToken: String, id_token: Option[String] = None,
+                   addlHdrs : Option[List[HttpHeader]] = None): RequestTransformer =
+      getHeaders(accessToken, id_token, OAuthConfig.providerConfig.authHeaderName,
+        OAuthConfig.providerConfig.authHeaderPrefix,
+        OAuthConfig.providerConfig.idHeaderName,
+        OAuthConfig.providerConfig.idHeaderPrefix, addlHdrs)
 
     def getHeaders(accessToken: String, id_token: Option[String], authHdrName: String, authHdrPrefix: String,
                            idHdrName: String, idHdrPrefix: String, addlHdrs : Option[List[HttpHeader]]): RequestTransformer =

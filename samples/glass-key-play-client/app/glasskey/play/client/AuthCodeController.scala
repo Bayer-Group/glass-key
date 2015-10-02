@@ -1,10 +1,9 @@
 package glasskey.play.client
 
-import glasskey.config.OAuthConfig
 import play.api.mvc._
 import play.api.libs.concurrent.Execution.Implicits._
 
-object AuthCodeController extends SampleController(PlayClientRuntimeEnvironment("hello-authcode-client", new OAuthConfig.Default())) {
+object AuthCodeController extends SampleController(PlayClientRuntimeEnvironment("hello-authcode-client")) {
 
   override def index(name: String) = Action.async { implicit request =>
     doAction(

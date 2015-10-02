@@ -2,9 +2,9 @@ import sbtrelease.ReleasePlugin._
 
 val theOrg = "glasskey"
 
-scalaVersion := "2.11.4"
+scalaVersion := "2.11.7"
 
-crossScalaVersions := Seq("2.10.4", "2.11.4")
+crossScalaVersions := Seq("2.10.4", "2.11.7")
 
 organization := theOrg
 
@@ -32,8 +32,8 @@ val commonSettings: Seq[Def.Setting[_]] = Seq(
 
 
 val akkaV = "2.3.6"
-val sprayV = "1.3.2"
-val sprayJsonV = "1.3.1"
+val sprayV = "1.3.3"
+val sprayJsonV = "1.3.2"
 
 val commonDeps = Seq[ModuleID](
   "com.fasterxml.jackson.module"  %% "jackson-module-scala" % "2.4.4",
@@ -46,7 +46,7 @@ val commonDeps = Seq[ModuleID](
 
 def scalaVerDependency(scalaVersion: String) = scalaVersion match {
   case "2.10.4" => Seq[ModuleID]("org.scalatest" % "scalatest_2.10" % "2.2.1" % "test")
-  case "2.11.4" => Seq[ModuleID]("org.scalatest" % "scalatest_2.11" % "2.2.1" % "test",
+  case "2.11.7" => Seq[ModuleID]("org.scalatest" % "scalatest_2.11" % "2.2.1" % "test",
     "org.scala-lang.modules"        %% "scala-parser-combinators" % "1.0.3")
 }
 

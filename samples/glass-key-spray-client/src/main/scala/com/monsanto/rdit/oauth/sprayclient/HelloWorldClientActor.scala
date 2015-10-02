@@ -2,6 +2,7 @@ package com.monsanto.rdit.oauth.sprayclient
 
 import akka.actor.Actor
 import glasskey.spray.OAuthRejectionUnwrapper
+import glasskey.spray.client.SprayClientRuntimeEnvironment
 import spray.routing.HttpService
 
 /**
@@ -15,9 +16,14 @@ class HelloWorldClientActor extends Actor with HttpService with OAuthRejectionUn
   val ro = new HelloWorldResourceOwnerClientService(actorRefFactory)
   val refresh = new HelloWorldAuthCodeRefreshTokenClientService(actorRefFactory)
 
-  def receive = runRoute(authCode.helloWorldRoute ~
-    cc.helloWorldRoute ~
-    ro.helloWorldRoute ~
-    authCodePrinter.helloWorldRoute ~
-    refresh.helloWorldRoute)
+  val authCodeEnv = SprayClientRuntimeEnvironment("hello-authcode-client")
+  val ccEnv = SprayClientRuntimeEnvironment("hello-client_credentials-client")
+  val roEnv = SprayClientRuntimeEnvironment("hello-resource_owner-client")
+
+  def receive = runRoute(authCode.helloWorldRoute(authCodeEnv) ~
+      cc.helloWorldRoute(ccEnv) ~
+      ro.helloWorldRoute(roEnv) ~
+      authCodePrinter.helloWorldRoute(authCodeEnv) ~
+      refresh.helloWorldRoute(authCodeEnv))
+
 }

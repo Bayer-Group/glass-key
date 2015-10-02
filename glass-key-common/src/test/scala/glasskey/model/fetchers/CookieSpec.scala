@@ -1,6 +1,5 @@
 package glasskey.model.fetchers
 
-import glasskey.NeutralTestRuntimeEnvironment
 import glasskey.model.{OAuthTerms, _}
 import glasskey.resource.{Audience, OIDCTokenData}
 import org.scalatest.{FlatSpec, Matchers}
@@ -12,9 +11,7 @@ import org.scalatest.{FlatSpec, Matchers}
 
 class CookieSpec extends FlatSpec with Matchers {
 
-  implicit val env = new NeutralTestRuntimeEnvironment()
-
-  val authHdrFetcher = new Cookie.Default("SPSECURITY", env)
+  val authHdrFetcher = new Cookie.Default("SPSECURITY")
 
   val fakeToken = new OAuthAccessToken(None,
     OAuthTerms.Bearer,
