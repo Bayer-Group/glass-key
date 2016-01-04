@@ -1,6 +1,6 @@
 package glasskey.spray.client
 
-import glasskey.model.InvalidToken
+import glasskey.model.{RefreshAccessTokenHelper, AuthCodeAccessTokenHelper, InvalidToken}
 import glasskey.spray.resource.validation.PingValidationJsonProtocol
 import spray.http.HttpCookie
 import spray.http.StatusCodes._
@@ -58,7 +58,7 @@ trait OAuthService extends HttpService with SprayJsonSupport with OAuthRejection
   def useNewToken(callback: OAuthAccessToken => Route, uri: String)(implicit env: SprayClientRuntimeEnvironment): Route =
     getNewToken(env.tokenHelper, uri, callback)
 
-  def getNewToken(tokenHelper: OAuthAccessTokenHelper, uri: String, callback: OAuthAccessToken => Route)(implicit env: SprayClientRuntimeEnvironment): Route = {
+  def getNewToken(tokenHelper: SprayOAuthAccessTokenHelper, uri: String, callback: OAuthAccessToken => Route)(implicit env: SprayClientRuntimeEnvironment): Route = {
     import glasskey.model.{AuthorizationCode, ClientCredentials, GrantType, ResourceOwner}
 
     def useCallback(token: OAuthAccessToken) = {
@@ -72,21 +72,15 @@ trait OAuthService extends HttpService with SprayJsonSupport with OAuthRejection
     GrantType.withName(tokenHelper.grantType) match {
       case AuthorizationCode =>
         logctx.debug("Request has no token, redirecting now..")
-        setCookie(HttpCookie("oauth-state", content = tokenHelper.apiAuthState), HttpCookie("orig-url", content = uri)) {
+        setCookie(HttpCookie("oauth-state", content = tokenHelper.asInstanceOf[AuthCodeAccessTokenHelper].apiAuthState), HttpCookie("orig-url", content = uri)) {
           // This is because spray does not have session support built-in yet
-          redirect(tokenHelper.authRequestUri, TemporaryRedirect)
+          redirect(tokenHelper.asInstanceOf[AuthCodeAccessTokenHelper].authRequestUri, TemporaryRedirect)
         }
-
-      case ClientCredentials =>
-        onComplete(tokenHelper.generateClientCredentialsAccessToken) {
+      case _ =>
+        onComplete(tokenHelper.generateToken(tokenHelper.tokenParams: _*)) {
           case Success(token) => useCallback(token.get)
+          case Failure(ex) => complete((InternalServerError, s"Could not generate token. Experienced error ${ex.getMessage}"))
         }
-
-      case ResourceOwner =>
-        onComplete(tokenHelper.generateResourceOwnerAccessToken) {
-          case Success(token) => useCallback(token.get)
-        }
-
     }
   }
 
@@ -107,7 +101,7 @@ trait OAuthService extends HttpService with SprayJsonSupport with OAuthRejection
       val origUrl = findCookieValue(ctx, "orig-url")
 
       if (state == oldState.get) {
-        onComplete(env.tokenHelper.generateAuthCodeAccessToken(code, state)) {
+        onComplete(env.tokenHelper.generateToken(env.tokenHelper.asInstanceOf[AuthCodeAccessTokenHelper].authCodeParams(code): _*)) {
           case Failure(ex) => complete((InternalServerError, s"Route Error Getting New Token Error: ${ex.getMessage}"))
           case Success(None) => complete((InternalServerError, "Could not generate token."))
           case Success(Some(token)) =>
@@ -127,7 +121,8 @@ trait OAuthService extends HttpService with SprayJsonSupport with OAuthRejection
 
   def refreshToken(refreshToken: String)(implicit env: SprayClientRuntimeEnvironment): Route = {
     import glasskey.spray.resource.validation.PingValidationJsonProtocol._
-    onComplete(env.tokenHelper.refreshToken(refreshToken)) {
+    onComplete(env.tokenHelper.asInstanceOf[SprayOAuthAccessTokenHelper].generateToken(
+      env.tokenHelper.asInstanceOf[RefreshAccessTokenHelper].refreshTokenParams(refreshToken): _*)) {
       case Failure(error) => complete(error)
       case Success(None) => complete(new InvalidToken("Refreshing token operation succeeded, but no token returned."))
       case Success(Some(refreshedToken)) => refreshedToken.refresh_token match {

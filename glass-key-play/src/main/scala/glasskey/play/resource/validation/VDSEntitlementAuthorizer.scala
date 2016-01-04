@@ -14,10 +14,10 @@ import PingIdentityAccessTokenValidatorFormats._
 /**
  * Created by loande on 6/18/15.
  */
-class VDSEntitlementAuthorizer(override val entitlementUri: String,
-                              override val desiredAuth: Seq[RBACAuthZData])(implicit ec: ExecutionContext) extends EntitlementAuthorizer with OAuthErrorHelper {
 
-  def this(entUri: String, desiredSingleAuth: RBACAuthZData)(implicit ec: ExecutionContext) = this(entUri, Seq(desiredSingleAuth))
+trait VDSEntitlementAuthorizer extends EntitlementAuthorizer with OAuthErrorHelper {
+
+  implicit val ec: ExecutionContext
 
   override def getAuth(accessToken: String, userId: String): Future[Seq[RBACAuthZData]] = {
 
@@ -28,12 +28,23 @@ class VDSEntitlementAuthorizer(override val entitlementUri: String,
     WS.url(modEntitlementUrl(userId)).withHeaders(OAuthConfig.providerConfig.authHeaderName -> s"${OAuthConfig.providerConfig.authHeaderPrefix}$accessToken")
       .get()
       .map {
-      response => {
-        response.json.validate[Seq[RBACAuthZData]] match {
-          case s: JsSuccess[Seq[RBACAuthZData]] => s.get
-          case e: JsError => throw new OIDCDataNotAvailableException("Entitlement data could not be read.")
+        response => {
+          response.json.validate[Seq[RBACAuthZData]] match {
+            case s: JsSuccess[Seq[RBACAuthZData]] => s.get
+            case e: JsError => throw new OIDCDataNotAvailableException("Entitlement data could not be read.")
+          }
         }
       }
-    }
   }
+}
+
+object VDSEntitlementAuthorizer {
+
+  def apply(entUri: String, desired: Seq[RBACAuthZData])(implicit exc: ExecutionContext): VDSEntitlementAuthorizer  =
+    new VDSEntitlementAuthorizer {
+      override val desiredAuth: Seq[RBACAuthZData] = desired
+      override val entitlementUri: String = entUri
+      override implicit val ec: ExecutionContext = exc
+    }
+  def apply(entUri: String, desiredSingleAuth: RBACAuthZData)(implicit ec: ExecutionContext): VDSEntitlementAuthorizer = apply(entUri, Seq(desiredSingleAuth))
 }

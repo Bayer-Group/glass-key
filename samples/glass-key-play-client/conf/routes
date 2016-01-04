@@ -9,7 +9,7 @@ GET        /api/PingHelloWorldRO              glasskey.play.client.ResourceOwner
 GET        /api/PingHelloWorldROCF            glasskey.play.client.ResourceOwnerControllerCF.index(name)
 
 # OAuth2 Established Client Redirect
-GET        /api/PingIdentityAuthCode          glasskey.play.client.AuthCodeController.oauth2Redirect(code: Option[String], state: Option[String])
+GET        /api/PingIdentityAuthCode          glasskey.play.client.AuthCodeController.oauth2Redirect(code: String, state: String)
 
 # Serve index.html static file for home requests
 GET        /api/PingHelloWorldImplicit        glasskey.play.client.ImplicitController.index(name)

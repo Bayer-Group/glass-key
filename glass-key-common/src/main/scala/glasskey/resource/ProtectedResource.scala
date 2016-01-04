@@ -11,7 +11,9 @@ trait ProtectedResource {
 
   import scala.concurrent.{ExecutionContext, Future}
 
-  val fetchers = Seq(new AuthHeader.Default, new RequestParameter.Default(OAuthConfig.providerConfig.jwksUri), new Cookie.Default(OAuthConfig.providerConfig.authCookieName))
+  val fetchers = Seq(new AuthHeader.Default,
+    new RequestParameter.Default(OAuthConfig.providerConfig.jwksUri),
+    new Cookie.Default(OAuthConfig.providerConfig.authCookieName))
 
   def handleRequest[R](request: R, handler: ProtectedResourceHandler[ValidatedData, ValidatedToken])(implicit ec: ExecutionContext): Future[ValidatedData] =
     request match {
@@ -19,13 +21,13 @@ trait ProtectedResource {
       case t: (OAuthAccessToken, Option[OIDCTokenData]) => handleToken(t, handler)
     }
 
-  private def handleToken(token: (OAuthAccessToken, Option[OIDCTokenData]), handler: ProtectedResourceHandler[ValidatedData, ValidatedToken])(implicit ec: ExecutionContext): Future[ValidatedData] = {
+  private def handleToken(token: (OAuthAccessToken, Option[OIDCTokenData]),
+                          handler: ProtectedResourceHandler[ValidatedData, ValidatedToken])(implicit ec: ExecutionContext): Future[ValidatedData] =
     handler.validateToken(token).flatMap { maybeToken =>
       handler
         .findValidatedData(maybeToken)
         .map(_.getOrElse(throw new InvalidToken("The access token is invalid")))
     }
-  }
 
   private def handleProtectedResourceRequest(request: ProtectedResourceRequest,
                                              handler: ProtectedResourceHandler[ValidatedData, ValidatedToken])(implicit ec: ExecutionContext): Future[ValidatedData] =
@@ -36,7 +38,5 @@ trait ProtectedResource {
 }
 
 object ProtectedResource {
-
-  class Default extends ProtectedResource
-
+  def apply: ProtectedResource = new ProtectedResource {}
 }

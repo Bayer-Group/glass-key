@@ -11,20 +11,18 @@ import scala.concurrent.Future
  * Created by loande on 1/7/2015.
  */
 
-abstract class SampleController(override val env: PlayClientRuntimeEnvironment) extends OAuthController.Default(env){
+abstract class SampleController extends OAuthController.Default {
 
-  def httpMethod(holder : WSRequestHolder):  Future[WSResponse] = holder.get()
+  def httpMethod: WSRequestHolder => Future[WSResponse] = { holder: WSRequestHolder => holder.get() }
 
-  def doSomethingWithResult(response: WSResponse): Result = {
+  def doSomethingWithResult: WSResponse => Result = { response: WSResponse =>
     Ok(Json.toJson((response.json).validate[HelloModelReturn].get))
   }
-
 
   def index(name: String) = Action.async { implicit request =>
     doAction(
       request,
-      None,
-      Some("http://localhost:9000/aws/rest/api/greeting_secure_oidc?name=" + name),
+       "http://localhost:9000/secure_hello?name=" + name,
       httpMethod,
       doSomethingWithResult)
   }

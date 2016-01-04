@@ -16,20 +16,19 @@ trait OAuthController extends Controller {
 
   import glasskey.model.OAuthAccessToken
 
+  def env: PlayClientRuntimeEnvironment
+
   def doAction(request: Request[AnyContent],
-                            origRequestURL: Option[String],
-                            resourceUri: Option[String],
-                            httpMethod: (WSRequestHolder) => Future[WSResponse],
-                            finishAction: (WSResponse) => Result)(implicit ec: ExecutionContext): Future[Result]
+               resourceUri: String,
+               httpMethod: (WSRequestHolder) => Future[WSResponse],
+               finishAction: (WSResponse) => Result)(implicit ec: ExecutionContext): Future[Result]
 
-  def getHeaderedWSRequestHolder(token: OAuthAccessToken, resourceUri: Option[String])(implicit ec: ExecutionContext): Option[WSRequestHolder]
-
-  def oauth2Redirect(codeOpt: Option[String] = None, stateOpt: Option[String] = None): Action[AnyContent]
+  def oauth2Redirect(code: String, state: String): Action[AnyContent]
 }
 
 object OAuthController {
 
-  abstract class Default(val env: PlayClientRuntimeEnvironment) extends OAuthController {
+  abstract class Default extends OAuthController {
 
     import glasskey.model._
 
@@ -40,90 +39,32 @@ object OAuthController {
       }
 
     def doAction(request: Request[AnyContent],
-                              origRequestURL: Option[String],
-                              resourceUri: Option[String],
-                              httpMethod: (WSRequestHolder) => Future[WSResponse],
-                              finishAction: (WSResponse) => Result)(implicit ec: ExecutionContext): Future[Result] =
-      doGrantAction(getExistingToken(request), origRequestURL, resourceUri, httpMethod, finishAction).recoverWith {
-        case e: ExpiredToken => doGrantAction(Future.successful(None), origRequestURL, resourceUri, httpMethod, finishAction)
+                 resourceUri: String,
+                 httpMethod: (WSRequestHolder) => Future[WSResponse],
+                 finishAction: (WSResponse) => Result)(implicit ec: ExecutionContext): Future[Result] =
+      (for {
+        existingToken <- getExistingToken(request)
+        actionResult <- doGrantAction(existingToken, resourceUri, httpMethod, finishAction)
+      } yield actionResult) recoverWith {
+        case e: ExpiredToken => doGrantAction(None, resourceUri, httpMethod, finishAction)
       }
 
-    private def doGrantAction(tokenOpt: Future[Option[OAuthAccessToken]],
-                             origRequestURL: Option[String],
-                             resourceUri: Option[String],
+    private def doGrantAction(tokenOpt: Option[OAuthAccessToken],
+                             resourceUri: String,
                              httpMethod: (WSRequestHolder) => Future[WSResponse],
                              finishAction: (WSResponse) => Result)(implicit ec: ExecutionContext): Future[Result] = {
-      tokenOpt flatMap {
+      tokenOpt match {
         case Some(token) =>
           performAction(token, resourceUri, httpMethod, finishAction)
-
         case None =>
-          GrantType.withName(env.tokenHelper.grantType) match {
-            case AuthorizationCode =>
-              Future.successful(
-                Redirect(env.tokenHelper.authRequestUri).withSession(
-                  "oauth-state" -> env.tokenHelper.apiAuthState,
-                  "orig-url" -> origRequestURL.get))
-
-            case ClientCredentials =>
-              env.tokenHelper.generateClientCredentialsAccessToken flatMap {
-                ccToken => performAction(ccToken.get, resourceUri, httpMethod, finishAction)
-              }
-            case ResourceOwner =>
-              env.tokenHelper.generateResourceOwnerAccessToken flatMap {
-                ccToken => performAction(ccToken.get, resourceUri, httpMethod, finishAction)
-              }
-          }
+          env.tokenHelper.getResult(resourceUri, httpMethod, finishAction)
       }
     }
 
-    private def performAction(token: OAuthAccessToken,
-                                           resourceUri: Option[String],
-                                           httpMethod: (WSRequestHolder) => Future[WSResponse],
-                                           finishAction: (WSResponse) => Result)(implicit ec: ExecutionContext): Future[Result] = {
-      getHeaderedWSRequestHolder(token, resourceUri) match {
-        case Some(holder) =>
-          httpMethod(holder).map { response =>
-            (response.json).validate[ValidationError] match {
-              case s: JsSuccess[ValidationError] => throw new ExpiredToken()
-              case e: JsError => finishAction(response)
-            }
-          }
-
-        case None =>
-          Future.successful(BadRequest("No resource URI given to token helper."))
-      }
-    }
-
-    def getHeaderedWSRequestHolder(token: OAuthAccessToken, resourceUri: Option[String])(implicit ec: ExecutionContext): Option[WSRequestHolder] =
-      resourceUri match {
-        case Some(url: String) =>
-          val authHdr = grabAuthTokenHeader(token.access_token)
-          val headers = grabIDTokenHeader(token.id_token) match {
-            case Some(x) => Seq(x, authHdr)
-            case None => Seq(authHdr)
-          }
-
-          Some(WS.url(resourceUri.get).withHeaders(headers: _*))
-
-        case None => None
-      }
-
-    private def grabAuthTokenHeader: PartialFunction[(String), (String, String)] = {
-      case (data) => HeaderNames.AUTHORIZATION -> (s"${OAuthConfig.providerConfig.authHeaderPrefix} " + data)
-    }
-
-    private def grabIDTokenHeader: PartialFunction[(Option[String]), Option[(String, String)]] = {
-      case Some(data) => Some(OAuthConfig.providerConfig.idHeaderName -> (s"${OAuthConfig.providerConfig.idHeaderPrefix} " + data))
-      case None => None
-    }
-
-    def oauth2Redirect(codeOpt: Option[String] = None, stateOpt: Option[String] = None): Action[AnyContent] = {
+    def oauth2Redirect(code: String, state: String): Action[AnyContent] = {
       import play.api.libs.concurrent.Execution.Implicits._
       def doLogin(implicit request: Request[AnyContent]): Option[Future[Result]] =
         for {
-          code <- codeOpt
-          state <- stateOpt
           oauthState <- request.session.get("oauth-state")
           origRequestURL <- request.session.get("orig-url")
         } yield {
@@ -136,7 +77,7 @@ object OAuthController {
         }
 
       def generateToken(code: String, state: String, origRequestURL: String): Future[Result] =
-        env.tokenHelper.generateAuthCodeAccessToken(code, state).map {
+        env.tokenHelper.generateToken(env.tokenHelper.asInstanceOf[AuthCodeAccessTokenHelper].authCodeParams(code): _*).map {
           case Some(token: OAuthAccessToken) =>
             val sessId = java.util.UUID.randomUUID().toString
             env.daoService.set(sessId, token, token.expires_in).map { _ => token }

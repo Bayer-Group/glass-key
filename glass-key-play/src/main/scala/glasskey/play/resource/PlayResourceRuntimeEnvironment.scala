@@ -11,9 +11,9 @@ class PlayResourceRuntimeEnvironment[R](val tokenValidators: Iterable[Validator[
 
 object PlayResourceRuntimeEnvironment {
 
-  def apply(clientConfigKey: String)(implicit ec: ExecutionContext) = {
+  def apply(clientConfigKey: String)(implicit ec: ExecutionContext): PlayResourceRuntimeEnvironment[WSResponse] = {
     val clientConfig = OAuthConfig.clients(clientConfigKey)
     new PlayResourceRuntimeEnvironment[WSResponse](
-      Seq(new PlayOAuthValidator.Default(clientConfig)))
+      Seq(PlayOAuthValidator(clientConfig)))
   }
 }

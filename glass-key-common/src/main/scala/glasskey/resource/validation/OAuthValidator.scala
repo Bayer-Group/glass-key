@@ -4,6 +4,8 @@ trait OAuthValidator[R] extends Validator[R]{
 
   import glasskey.model.OAuthTerms
 
+  val validationUri: String
+
   val grantType: String
 
   val clientSecret: String

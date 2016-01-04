@@ -14,11 +14,7 @@ import spray.client.pipelining._
 /**
  * Created by loande on 6/17/15.
  */
-class VDSEntitlementAuthorizer(override val entitlementUri: String, override val desiredAuth: Seq[RBACAuthZData])
-  extends  EntitlementAuthorizer with OAuthErrorHelper with OAuthAction {
-
-  def this(entUri: String, desiredSingleAuth: RBACAuthZData) = this(entUri, Seq(desiredSingleAuth))
-
+trait VDSEntitlementAuthorizer extends EntitlementAuthorizer with OAuthErrorHelper with OAuthAction {
   def getEntitlementPipeline[T : FromResponseUnmarshaller](accessToken: String): HttpRequest => Future[T] = {
     (addHeaders(Authorization(OAuth2BearerToken(accessToken)))
       ~> encode(Gzip)
@@ -37,5 +33,15 @@ class VDSEntitlementAuthorizer(override val entitlementUri: String, override val
       Get(modEntitlementUrl(userId))
     }
   }
+}
 
+
+object VDSEntitlementAuthorizer {
+
+  def apply(entUri: String, desired: Seq[RBACAuthZData]): VDSEntitlementAuthorizer = new VDSEntitlementAuthorizer {
+    override val desiredAuth: Seq[RBACAuthZData] = desired
+    override val entitlementUri: String = entUri
+  }
+
+  def apply(entUri: String, desiredSingleAuth: RBACAuthZData): VDSEntitlementAuthorizer = apply(entUri, Seq(desiredSingleAuth))
 }

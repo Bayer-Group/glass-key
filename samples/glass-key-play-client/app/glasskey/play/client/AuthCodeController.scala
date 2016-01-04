@@ -1,15 +1,18 @@
 package glasskey.play.client
 
+import glasskey.model.AuthCodeAccessTokenHelper
 import play.api.mvc._
 import play.api.libs.concurrent.Execution.Implicits._
 
-object AuthCodeController extends SampleController(PlayClientRuntimeEnvironment("hello-authcode-client")) {
+object AuthCodeController extends SampleController {
+
+  override def env: PlayClientRuntimeEnvironment = PlayClientRuntimeEnvironment("hello-authcode-client")
 
   override def index(name: String) = Action.async { implicit request =>
+    env.tokenHelper.asInstanceOf[AuthCodeAccessTokenHelper].redirectUri = routes.AuthCodeController.index(name).absoluteURL()
     doAction(
       request,
-      Some(routes.AuthCodeController.index(name).absoluteURL()),
-      Some("http://localhost:9000/aws/rest/api/greeting_secure_oidc?name=" + name),
+      "http://localhost:9000/secure_hello?name=" + name,
       httpMethod,
       doSomethingWithResult)
   }

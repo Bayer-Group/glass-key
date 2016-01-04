@@ -22,7 +22,7 @@
             jso.callback();
             JSO.enablejQuery($);
             jso.ajax({
-                url: "http://localhost:9000/aws/rest/api/greeting_secure_oidc?name=" + "@name",
+                url: "http://localhost:9000/secure_hello?name=" + "@name",
                 oauth: {
                     scopes: {
                         request: ["openid"]

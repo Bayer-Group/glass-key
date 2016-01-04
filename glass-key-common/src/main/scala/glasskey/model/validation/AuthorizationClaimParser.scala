@@ -39,7 +39,7 @@ case class OIDCHas[T](claimName: String, value: T)(implicit tag: ClassTag[T]) ex
 
   def checkValue(token: OIDCTokenData): Boolean = {
     token.tokenDetails.find(claim => claim.name == claimName) match {
-      case Some(c: Claim[_]) => c.value == value
+      case Some(c: Claim[T]) => c.value == value
       case None => false
     }
   }
@@ -84,5 +84,6 @@ trait AuthorizationClaimParser[T] extends RegexParsers {
   def parseExpression(s: String): Expr[T] = parseAll(expr, s) match {
     case Success(res, _) => res
     case Failure(msg, _) => throw new Exception(msg)
+    case Error(msg, _) => throw new Exception(msg)
   }
 }

@@ -3,6 +3,7 @@ package glasskey.play.resource
 import glasskey.config.OAuthConfig
 import glasskey.model.ValidatedData
 import glasskey.play.resource.validation.PingIdentityAccessTokenValidatorFormats
+import glasskey.resource.ProtectedResource
 import glasskey.resource.validation.Validator
 import play.api.libs.ws.WSResponse
 import play.api.mvc._
@@ -12,7 +13,7 @@ import scala.language.implicitConversions
 
 class OAuthRequest[A](val user: ValidatedData, request: Request[A])(implicit ec: ExecutionContext, env: PlayResourceRuntimeEnvironment[WSResponse]) extends WrappedRequest[A](request)
 
-trait OAuthAction {
+trait OAuthAction extends ActionBuilder[OAuthRequest] {
 
   import PingIdentityAccessTokenValidatorFormats._
   import glasskey.model._
@@ -28,7 +29,6 @@ trait OAuthAction {
   def tokenValidators : Iterable[Validator[WSResponse]]
 
   implicit val env : PlayResourceRuntimeEnvironment[WSResponse]
-
   implicit val ec: ExecutionContext
 
   implicit def play2protectedResourceRequest[A](request: Request[A]): ProtectedResourceRequest = {
@@ -85,28 +85,33 @@ trait OAuthAction {
 }
 
 object OAuthAction {
-  def apply[T](block: OAuthRequest[AnyContent] => play.api.mvc.Result)(implicit ec:ExecutionContext, env: PlayResourceRuntimeEnvironment[WSResponse]) = {
-    val action = new OAuthAction.Default()
+  def apply[T](block: OAuthRequest[AnyContent] => play.api.mvc.Result)(implicit ec:ExecutionContext,
+                                                                       env: PlayResourceRuntimeEnvironment[WSResponse]): Action[AnyContent] =
+  {
+    val action = createAction(env)
     action.apply(block)
   }
 
-  def apply[T](block: OAuthRequest[AnyContent] => play.api.mvc.Result, jwksUri: String, tokenValidators: Iterable[Validator[WSResponse]])(implicit ec:ExecutionContext, env: PlayResourceRuntimeEnvironment[WSResponse]) = {
-    val action = new OAuthAction.DefaultWithValues[T](jwksUri, tokenValidators)
+  def apply[T](block: OAuthRequest[AnyContent] => play.api.mvc.Result,
+               jwksUri: String, tokenValidators: Iterable[Validator[WSResponse]])(implicit ec:ExecutionContext,
+                                                                                  env: PlayResourceRuntimeEnvironment[WSResponse]): Action[AnyContent] =
+  {
+    val action = createAction[T](tokenValidators, env)
     action.apply(block)
   }
 
-  class Default(implicit val ec: ExecutionContext, val env: PlayResourceRuntimeEnvironment[WSResponse]) extends ActionBuilder[OAuthRequest] with OAuthAction{
-
-    import glasskey.resource.ProtectedResource
-
-    override val resource = new ProtectedResource.Default
+  def createAction(resourceEnv: PlayResourceRuntimeEnvironment[WSResponse])(implicit exc:ExecutionContext): OAuthAction = new OAuthAction {
+    override implicit val ec: ExecutionContext = exc
+    override val resource = ProtectedResource.apply
     override val tokenValidators = env.tokenValidators
+    override implicit val env: PlayResourceRuntimeEnvironment[WSResponse] = resourceEnv
   }
 
-  class DefaultWithValues[T](jwksUri: String, override val tokenValidators: Iterable[Validator[WSResponse]])(implicit val ec: ExecutionContext, val env: PlayResourceRuntimeEnvironment[WSResponse]) extends ActionBuilder[OAuthRequest] with OAuthAction{
-
-    import glasskey.resource.ProtectedResource
-
-    override val resource = new ProtectedResource.Default
+  def createAction[T](validators: Iterable[Validator[WSResponse]],
+                      resourceEnv: PlayResourceRuntimeEnvironment[WSResponse])(implicit exc: ExecutionContext): OAuthAction = new OAuthAction {
+    override implicit val ec: ExecutionContext = exc
+    override val resource = ProtectedResource.apply
+    override def tokenValidators: Iterable[Validator[WSResponse]] = validators
+    override implicit val env: PlayResourceRuntimeEnvironment[WSResponse] = resourceEnv
   }
 }

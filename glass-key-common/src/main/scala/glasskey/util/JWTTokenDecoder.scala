@@ -11,7 +11,13 @@ import org.apache.commons.codec.binary.Base64
 
 import scala.collection.JavaConversions._
 
-class JWTTokenDecoder(algorithms: Map[String, String], mapper: ObjectMapper with ScalaObjectMapper, rsaKeySource: PublicKeySource) {
+
+trait JWTTokenDecoder {
+
+  protected def algorithms: Map[String, String]
+  protected def mapper: ObjectMapper with ScalaObjectMapper
+  protected def rsaKeySource: PublicKeySource
+
 
   def verify(token: String): Seq[Claim[_]] = {
     val pieces = token.split("\\.")
@@ -45,7 +51,7 @@ class JWTTokenDecoder(algorithms: Map[String, String], mapper: ObjectMapper with
   }
 
   def decodeClaims(node: JsonNode) : Seq[Claim[_]] = {
-    val something = for (blah <- node.fields()) yield {
+    val something = for (blah <- node.fields) yield {
       blah.getKey match {
         case OIDCTokenData.SUB_CLAIM => Subject(blah.getValue.asText)
         case OIDCTokenData.AUD_CLAIM => Audience(blah.getValue.asText)
@@ -82,9 +88,13 @@ object JWTTokenDecoder {
   def apply(src: String, keySourceType: PublicKeySourceType): JWTTokenDecoder = apply(PublicKeySource(src, keySourceType))
 
   def apply(util: PublicKeySource): JWTTokenDecoder = {
-    val mapper = new ObjectMapper with ScalaObjectMapper
-    mapper.registerModule(DefaultScalaModule)
+    val objMapper = new ObjectMapper with ScalaObjectMapper
+    objMapper.registerModule(DefaultScalaModule)
     val algoMap = Map("RS256" -> "SHA256withRSA")
-    new JWTTokenDecoder(algoMap, mapper, util)
+    new JWTTokenDecoder {
+      override def algorithms = algoMap
+      override def mapper = objMapper
+      override def rsaKeySource = util
+    }
   }
 }

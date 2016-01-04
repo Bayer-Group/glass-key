@@ -3,6 +3,7 @@ package glasskey.play.client
 import glasskey.db.DBTokenService
 import glasskey.ClientRuntimeEnvironment
 import glasskey.config.OAuthConfig
+import glasskey.model.GrantType
 
 /**
  * Created by loande on 2/16/15.
@@ -16,15 +17,14 @@ object PlayClientRuntimeEnvironment {
 
   def apply(clientConfigKey: String) = {
     val clientConfig = OAuthConfig.clients(clientConfigKey)
-    new PlayClientRuntimeEnvironment(new PlayOAuthAccessTokenHelper(clientConfig))
+    new PlayClientRuntimeEnvironment(PlayOAuthAccessTokenHelper(clientConfig))
   }
   def apply(clientId: String, clientSecret: Option[String], apiRedirectUri: Option[String],
             resourceOwnerUsername: Option[String], resourceOwnerPassword: Option[String],
             grantType: String, authUrl: String, accessTokenUrl: String,
             providerWantsBasicAuth : Boolean) = {
-    new PlayClientRuntimeEnvironment(new PlayOAuthAccessTokenHelper(clientId,
-      clientSecret, apiRedirectUri, resourceOwnerUsername, resourceOwnerPassword, grantType, authUrl,
-      accessTokenUrl, providerWantsBasicAuth))
+    new PlayClientRuntimeEnvironment(PlayOAuthAccessTokenHelper(clientId,
+      clientSecret, apiRedirectUri, resourceOwnerUsername, resourceOwnerPassword, authUrl,
+      accessTokenUrl, providerWantsBasicAuth, GrantType.withName(grantType)))
   }
-
 }

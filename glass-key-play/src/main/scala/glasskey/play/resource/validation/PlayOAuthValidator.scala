@@ -15,8 +15,6 @@ trait PlayOAuthValidator extends OAuthValidator[WSResponse] {
 
   import scala.concurrent.Future
 
-  def validationUrl: String
-
   override def getValidationResponse(tokenData: (OAuthAccessToken, Option[OIDCTokenData]))(implicit ec: ExecutionContext): Future[WSResponse] = {
     import com.ning.http.client.AsyncHttpClientConfig
     import play.api.Play.current
@@ -27,14 +25,14 @@ trait PlayOAuthValidator extends OAuthValidator[WSResponse] {
       .foldLeft("")((a, t) => a + (t._1 + "=" + t._2 + "&"))
       .dropRight(1)
 
-    Logger.debug("Sending " + queryString + " as the body to " + validationUrl)
+    Logger.debug("Sending " + queryString + " as the body to " + validationUri)
 
     // You can directly use the builder for specific options once you have secure TLS defaults...
     val builder = new AsyncHttpClientConfig.Builder(new NingAsyncHttpClientConfigBuilder(new DefaultWSClientConfig()).build())
       .setCompressionEnabled(true)
 
     implicit val sslClient = new NingWSClient(builder.build())
-    val holder: WSRequestHolder = WS.url(validationUrl).withHeaders("Content-Type" -> "application/x-www-form-urlencoded")
+    val holder: WSRequestHolder = WS.url(validationUri).withHeaders("Content-Type" -> "application/x-www-form-urlencoded")
 
     holder.post(queryString)
   }
@@ -58,13 +56,14 @@ trait PlayOAuthValidator extends OAuthValidator[WSResponse] {
 object PlayOAuthValidator {
 
   import glasskey.model.ValidatedData
-  import glasskey.resource.validation.OAuthValidator
-  import play.api.libs.ws.WSResponse
 
-  class Default[U <: ValidatedData](override val validationUrl: String, override val grantType: String,
-                                override val clientSecret: String, override val clientId: String)
-    extends OAuthValidator[WSResponse] with PlayOAuthValidator {
-    def this(clientConfig: ClientConfig) = this(OAuthConfig.providerConfig.validationUri,
-      OAuthConfig.providerConfig.validationGrantType, clientConfig.clientSecret.get, clientConfig.clientId.get)
+  def apply[U <: ValidatedData](validUri: String, grant: String, secret: String, id: String): PlayOAuthValidator = new PlayOAuthValidator {
+    override val validationUri: String = validUri
+    override val grantType: String = grant
+    override val clientSecret: String = secret
+    override val clientId: String = id
   }
+
+  def apply(clientConfig: ClientConfig): PlayOAuthValidator = apply(OAuthConfig.providerConfig.validationUri,
+    OAuthConfig.providerConfig.validationGrantType, clientConfig.clientSecret.get, clientConfig.clientId.get)
 }

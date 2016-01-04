@@ -21,6 +21,6 @@ object SprayResourceRuntimeEnvironment {
 
   def apply(clientConfig: ClientConfig)(implicit ec: ExecutionContext): SprayResourceRuntimeEnvironment[ValidationResponse] = {
     new SprayResourceRuntimeEnvironment[ValidationResponse](
-      Seq(new SprayOAuthValidator.Default(clientConfig)))
+      Seq(SprayOAuthValidator(clientConfig)))
   }
 }
