@@ -89,3 +89,9 @@ lazy val spray = (project in file("glass-key-spray")).
   settings(libraryDependencies ++= scalaVerDependency(scalaVersion.value)).
   settings(libraryDependencies ++= Seq[ModuleID]("org.scala-lang" % "scala-reflect" % scalaVersion.value)).
   dependsOn(common)
+
+// for bintray
+
+bintrayOrganization := Some("monsanto")
+
+licenses += ("BSD", url("http://opensource.org/licenses/BSD-3-Clause"))
