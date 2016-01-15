@@ -1,5 +1,6 @@
 package glasskey.model.fetchers
 
+import com.typesafe.config.ConfigFactory
 import glasskey.config.OAuthConfig
 import glasskey.model.{OAuthAccessToken, OAuthTerms, ProtectedResourceRequest}
 import glasskey.resource._
@@ -30,7 +31,7 @@ class IDTokenRequestParameterSpec  extends FlatSpec with Matchers {
     new Subject("loande"),
     new AtHash("RJc8rNBx0R_ftiwVY_ZiUg"),
     new Audience("TPS_TEST"),
-    new Issuer("https://ping.company.com")))
+    new Issuer(ConfigFactory.load.getString("test-issuer"))))
 
   val fakeRequestBad = new ProtectedResourceRequest(
     headers = Map("OIDC_ID_Token" -> Seq("Blah")), // The Authorization is here, but the token value is incorrect
