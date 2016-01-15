@@ -2,10 +2,6 @@ import sbtrelease.ReleasePlugin._
 
 val theOrg = "glasskey"
 
-scalaVersion := "2.11.7"
-
-crossScalaVersions := Seq("2.10.4", "2.11.7")
-
 organization := theOrg
 
 val commonSettings: Seq[Def.Setting[_]] = Seq(
@@ -40,15 +36,11 @@ val commonDeps = Seq[ModuleID](
   "commons-codec"                 %  "commons-codec"        % "1.6",
   "com.nimbusds"                  %  "nimbus-jose-jwt"      % "3.8.2",
   "com.typesafe"                  %  "config"               % "1.2.1",
-  "com.typesafe.slick"            %% "slick"                % "2.1.0",
-  "org.scalatest"                 %% "scalatest"            % "2.2.1"   % "test"
+  "com.typesafe.slick"            %% "slick"                % "2.1.0"
 )
 
-def scalaVerDependency(scalaVersion: String) = scalaVersion match {
-  case "2.10.4" => Seq[ModuleID]("org.scalatest" % "scalatest_2.10" % "2.2.1" % "test")
-  case "2.11.7" => Seq[ModuleID]("org.scalatest" % "scalatest_2.11" % "2.2.1" % "test",
+def otherDeps =  Seq[ModuleID]("org.scalatest" % "scalatest_2.11" % "2.2.1" % "test",
     "org.scala-lang.modules"        %% "scala-parser-combinators" % "1.0.3")
-}
 
 val playDeps =
   Seq[ModuleID] (
@@ -70,28 +62,31 @@ val sprayDeps =
 lazy val common = (project in file("glass-key-common")).
   settings(commonSettings: _*).
   settings(name := "glass-key-common").
+  settings(scalaVersion := "2.11.7").
   settings(bintrayOrganization := Some("monsanto")).
   settings(licenses += ("BSD", url("http://opensource.org/licenses/BSD-3-Clause"))).
   settings(libraryDependencies ++= commonDeps).
-  settings(libraryDependencies ++= scalaVerDependency(scalaVersion.value)).
+  settings(libraryDependencies ++= otherDeps).
   settings(libraryDependencies ++= Seq[ModuleID]("org.scala-lang" % "scala-reflect" % scalaVersion.value))
 
 lazy val play = (project in file("glass-key-play")).
   settings(commonSettings: _*).
   settings(name := "glass-key-play").
+  settings(scalaVersion := "2.11.7").
   settings(bintrayOrganization := Some("monsanto")).
   settings(licenses += ("BSD", url("http://opensource.org/licenses/BSD-3-Clause"))).
   settings(libraryDependencies ++= playDeps).
   settings(libraryDependencies ++= Seq[ModuleID]("org.scala-lang" % "scala-reflect" % scalaVersion.value)).
-  settings(libraryDependencies ++= scalaVerDependency(scalaVersion.value)).
+  settings(libraryDependencies ++= otherDeps).
   dependsOn(common)
 
 lazy val spray = (project in file("glass-key-spray")).
   settings(commonSettings: _*).
   settings(name := "glass-key-spray").
+  settings(scalaVersion := "2.11.7").
   settings(bintrayOrganization := Some("monsanto")).
   settings(licenses += ("BSD", url("http://opensource.org/licenses/BSD-3-Clause"))).
   settings(libraryDependencies ++= sprayDeps).
-  settings(libraryDependencies ++= scalaVerDependency(scalaVersion.value)).
+  settings(libraryDependencies ++= otherDeps).
   settings(libraryDependencies ++= Seq[ModuleID]("org.scala-lang" % "scala-reflect" % scalaVersion.value)).
   dependsOn(common)
