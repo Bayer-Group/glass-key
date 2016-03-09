@@ -25,7 +25,7 @@ class EntitlementAuthorizerSpec extends FunSpec with Matchers with RegexParsers 
       }
     }
 
-    describe("one non-matching user app with one user entitlement") {
+    describe("one matching user app with one non-matching user entitlement") {
       val user = Seq(RBACAuthZData("MyApp", Set("MyEntitlementOther")))
       val auth = new SimpleEntitlementAuthorizer(desired)
       it("should be false on an OR") {
