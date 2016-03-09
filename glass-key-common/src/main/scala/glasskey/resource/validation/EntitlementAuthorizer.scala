@@ -27,20 +27,24 @@ trait EntitlementAuthorizer extends OAuthErrorHelper {
 
   def getAuth(accessToken: String, userId: String): Future[Seq[RBACAuthZData]]
 
-  def andAuthorized(usersAuth: Seq[RBACAuthZData]): Boolean =
-    testUserAuthWithDesired(usersAuth).foldLeft(true)(_ && _)
+  def andAuthorized(usersAuth: Seq[RBACAuthZData]): Boolean = {
+    val truthiness = testUserAuthWithDesired(usersAuth)(containsEntitlements)
+    truthiness.foldLeft(true)(_ && _) && truthiness.size == desiredAuth.size
+  }
 
   def orAuthorized(usersAuth: Seq[RBACAuthZData]): Boolean =
-    testUserAuthWithDesired(usersAuth).foldLeft(false)(_ || _)
+    testUserAuthWithDesired(usersAuth)(containsAnyOf).foldLeft(false)(_ || _)
 
-  def testUserAuthWithDesired(usersAuth: Seq[RBACAuthZData]): Seq[Boolean] =
-    usersAuth map {
-      singleAppUserAuth =>
-        val matchingDesiredAuth = desiredAuth.filter(x => x.name == singleAppUserAuth.name).head
-        containsEntitlements(matchingDesiredAuth.entitlements, singleAppUserAuth.entitlements)
-    }
+  def testUserAuthWithDesired(usersAuth: Seq[RBACAuthZData])(setFunc: (Set[String], Set[String]) => Boolean): Seq[Boolean] =
+    for {
+      singleAppDesiredAuth <- desiredAuth
+      matchingUserAppAuth <- usersAuth.filter(x => x.name == singleAppDesiredAuth.name)
+    } yield setFunc(singleAppDesiredAuth.entitlements, matchingUserAppAuth.entitlements)
+
 
   private def missingEntitlements(desiredAuth: Set[String], usersAuth: Set[String]): String = (desiredAuth diff usersAuth).mkString(",")
 
   private def containsEntitlements(desiredAuth: Set[String], usersAuth: Set[String]): Boolean = (desiredAuth & usersAuth) == desiredAuth
+
+  private def containsAnyOf(desiredAuth: Set[String], usersAuth: Set[String]): Boolean = desiredAuth.intersect(usersAuth).nonEmpty
 }
