@@ -90,3 +90,5 @@ lazy val spray = (project in file("glass-key-spray")).
   settings(libraryDependencies ++= otherDeps).
   settings(libraryDependencies ++= Seq[ModuleID]("org.scala-lang" % "scala-reflect" % scalaVersion.value)).
   dependsOn(common)
+
+lazy val root = (project in file(".")).aggregate(common, play, spray).settings(publish := { })
