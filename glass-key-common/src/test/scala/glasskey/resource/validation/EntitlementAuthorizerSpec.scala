@@ -86,7 +86,7 @@ class EntitlementAuthorizerSpec extends FunSpec with Matchers with RegexParsers 
       val user = Seq(RBACAuthZData("MyApp", Set("MyEntitlement2")))
 
       // TODO: This fails, which appears to be a bug.  The user has one of the entitlements, but is being denied.
-      // This is probably due to the use of .head() in the implementation
+      // This is probably due to the use of .head() in the implementation, as the reverse order works above.
       it("should be true on an OR") {
         auth.orAuthorized(user) should be(true)
       }
