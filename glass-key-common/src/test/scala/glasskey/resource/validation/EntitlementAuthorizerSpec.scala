@@ -42,11 +42,7 @@ class EntitlementAuthorizerSpec extends FunSpec with Matchers with RegexParsers 
 
     describe("One user app with one of the entitlements") {
       val user = Seq(RBACAuthZData("MyApp", Set("MyEntitlement1")))
-      //TODO: Is this expected?  Two entilements for a given app are being treated as an AND even on the OR method.
-      // Is the idea here that each given RBACAuthZData() instance in "desired" is always an AND, and the and/or logic
-      // is only for the overall Seq() of RBACAuthZData() instances?  I can see that being useful, but it might not be
-      // obvious that this would behave differently from:
-      // Seq(RBACAuthZData("MyApp", Set("MyEntitlement1")), RBACAuthZData("MyApp", Set("MyEntitlement2")))
+
       it("should be true on an OR") {
         auth.orAuthorized(user) should be(true)
       }
@@ -76,7 +72,6 @@ class EntitlementAuthorizerSpec extends FunSpec with Matchers with RegexParsers 
       it("should be true on an OR") {
         auth.orAuthorized(user) should be(true)
       }
-      // TODO: This fails, which appears to be a bug.  The user only has one of the entitlements and is being given access.
       it("should be false on an AND") {
         auth.andAuthorized(user) should be(false)
       }
@@ -85,8 +80,6 @@ class EntitlementAuthorizerSpec extends FunSpec with Matchers with RegexParsers 
     describe("One user app with the second of the entitlements") {
       val user = Seq(RBACAuthZData("MyApp", Set("MyEntitlement2")))
 
-      // TODO: This fails, which appears to be a bug.  The user has one of the entitlements, but is being denied.
-      // This is probably due to the use of .head() in the implementation, as the reverse order works above.
       it("should be true on an OR") {
         auth.orAuthorized(user) should be(true)
       }
@@ -151,7 +144,6 @@ class EntitlementAuthorizerSpec extends FunSpec with Matchers with RegexParsers 
       it("should be true on an OR") {
         auth.orAuthorized(user) should be(true)
       }
-      // TODO: This fails, which appears to be a bug.  The user only has one of the entitlements and is being given access.
       it("should be false on an AND") {
         auth.andAuthorized(user) should be(false)
       }
@@ -162,7 +154,6 @@ class EntitlementAuthorizerSpec extends FunSpec with Matchers with RegexParsers 
       it("should be true on an OR") {
         auth.orAuthorized(user) should be(true)
       }
-      // TODO: This fails, which appears to be a bug.  The user only has one of the entitlements and is being given access.
       it("should be false on an AND") {
         auth.andAuthorized(user) should be(false)
       }
